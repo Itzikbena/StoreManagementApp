@@ -11,6 +11,11 @@ import java.util.List;
 @RequestMapping("/api/products")
 public class ProductController {
 
+    @PostMapping("/add/{branchId}")
+    public Product addProduct(@RequestBody Product product, @PathVariable Long branchId) {
+        return productService.addProduct(product, branchId);
+    }
+
     @Autowired
     private ProductService productService;
 
@@ -22,11 +27,6 @@ public class ProductController {
     @GetMapping("/{id}")
     public Product getProductById(@PathVariable Long id) {
         return productService.getProductById(id);
-    }
-
-    @PostMapping
-    public Product addProduct(@RequestBody Product product) {
-        return productService.addProduct(product);
     }
 
     @DeleteMapping("/{id}")
