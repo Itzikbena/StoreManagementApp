@@ -1,4 +1,3 @@
-
 package com.HIT.StoreManagementApp.model;
 
 import jakarta.persistence.*;
@@ -6,17 +5,16 @@ import jakarta.persistence.*;
 @Entity
 public class BranchProduct {
 
-    @EmbeddedId
-    private BranchProductId id = new BranchProductId();
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne
-    @MapsId("branchId")
-    @JoinColumn(name = "branch_id")
+    @JoinColumn(name = "branch_id", nullable = false)
     private Branch branch;
 
     @ManyToOne
-    @MapsId("productId")
-    @JoinColumn(name = "product_id")
+    @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
     private int branchStock;
