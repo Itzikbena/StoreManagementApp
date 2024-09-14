@@ -18,6 +18,13 @@ public class UserService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+
+    // Method to find a User by their ID
+    public User findById(Long id) {
+        Optional<User> user = userRepository.findById(id);
+        return user.orElse(null); // Return the user if found, otherwise return null
+    }
+
     // Create an employee
     public User createEmployee(User user) {
         // Add logic for creating a new employee (e.g., encrypting the password)
