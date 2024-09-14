@@ -26,24 +26,30 @@ public class SaleController {
     private BranchProductService BranchProductService;
 
     @Autowired
-    private SaleRepository saleRepository;  // Inject the SaleRepository to record sales
+    private CustomerService customerService; // Inject customer service
+
+    @Autowired
+    private SaleRepository saleRepository;
 
     @PostMapping("/sell")
-    public ResponseEntity<?> sellProduct(@RequestParam Long employeeId, @RequestParam Long productId, @RequestParam Long branchId, @RequestParam int quantity) {
-        // Find Employee, Product, and Branch
+    public ResponseEntity<?> sellProduct(@RequestParam Long employeeId, @RequestParam Long productId,
+                                         @RequestParam Long branchId, @RequestParam int quantity,
+                                         @RequestParam Long customerId) {
+        // Find Employee, Product, Branch, and Customer
         User employee = userService.findById(employeeId);
         Product product = productService.findById(productId);
         Branch branch = branchService.getBranchById(branchId);
+        Customer customer = customerService.findById(customerId);
 
-        if (employee == null || product == null || branch == null) {
-            return ResponseEntity.badRequest().body("Employee, Product, or Branch not found.");
+        if (employee == null || product == null || branch == null || customer == null) {
+            return ResponseEntity.badRequest().body("Employee, Product, Branch, or Customer not found.");
         }
 
         // Update product stock after sale
         boolean success = BranchProductService.updateStock(branchId, productId, quantity);
 
         if (success) {
-            // Calculate the sale price (twice the quantity sold, as per your requirement)
+            // Calculate the sale price (twice the quantity sold)
             double price = product.getPrice() * 2 * quantity;
 
             // Create a new Sale record
@@ -51,6 +57,7 @@ public class SaleController {
             sale.setProduct(product);
             sale.setEmployee(employee);
             sale.setBranch(branch);
+            sale.setCustomer(customer); // Set the customer for the sale
             sale.setQuantity(quantity);
             sale.setPrice(price);
             sale.setSaleTime(LocalDateTime.now());

@@ -23,11 +23,16 @@ public class Sale {
     @JoinColumn(name = "branch_id")
     private Branch branch;
 
+    @ManyToOne
+    @JoinColumn(name = "customer_id") // Adding customer relationship
+    private Customer customer;
+
     private int quantity;
-    private double price; // This is twice the quantity sold, as per your requirement
+    private double price;
     private LocalDateTime saleTime;
 
     // Getters and setters
+
     public Long getId() {
         return id;
     }
@@ -58,6 +63,14 @@ public class Sale {
 
     public void setBranch(Branch branch) {
         this.branch = branch;
+    }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
     }
 
     public int getQuantity() {
