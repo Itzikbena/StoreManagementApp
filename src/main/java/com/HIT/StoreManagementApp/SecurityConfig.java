@@ -6,6 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,7 +17,8 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
-public class SecurityConfig {
+@EnableWebSecurity
+public class SecurityConfig  {
 
     private final CustomUserDetailsService userDetailsService;
 
@@ -33,7 +35,6 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf
-                        // Disable CSRF for /login and /admin/users
                         .ignoringRequestMatchers(
                                 new AntPathRequestMatcher("/login"),
                                 new AntPathRequestMatcher("/api/**"),
@@ -41,12 +42,13 @@ public class SecurityConfig {
                         )
                 )
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        .requestMatchers("/login").permitAll()
-                        .requestMatchers("/admin/**").hasRole("ADMIN")  // Allow only ADMIN role
+                        .requestMatchers("/login").permitAll()  // Allow access to login page
+                        .requestMatchers("/infopage").authenticated()  // Require authentication for infopage
+                        .requestMatchers("/admin/**").hasRole("ADMIN")  // Allow only ADMIN to access admin URLs
                         .requestMatchers("/employee/**").hasAnyRole("ADMIN", "EMPLOYEE")  // Allow both ADMIN and EMPLOYEE
-                        .anyRequest().authenticated()
+                        .anyRequest().authenticated()  // All other requests must be authenticated
                 )
-                .httpBasic(withDefaults())  // Enable Basic Authentication for simplicity
+                .httpBasic(withDefaults())  // Enable Basic Authentication
                 .logout(logout -> logout
                         .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
                         .permitAll()
@@ -69,4 +71,3 @@ public class SecurityConfig {
         return authProvider;
     }
 }
-

@@ -19,6 +19,19 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
 
+    public User validateUser(String username, String password) {
+        Optional<User> userOptional = userRepository.findByUsername(username);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            // Check if the password matches
+            if (passwordEncoder.matches(password, user.getPassword())) {
+                return user;
+            }
+        }
+        return null;  // Return null if the user does not exist or the password does not match
+    }
+
+
     // Method to find a User by their ID
     public User findById(Long id) {
         Optional<User> user = userRepository.findById(id);

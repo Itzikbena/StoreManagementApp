@@ -12,6 +12,7 @@
   </style>
 </head>
 <body>
+
 <h2>Products List</h2>
 <ul id="productList"></ul>
 
@@ -23,14 +24,20 @@
 </div>
 
 <script>
-  // Fetch the employee's branchId from localStorage
-  const branchId = localStorage.getItem('branchId');
+  // Function to get query parameters from the URL
+  function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+  }
+
+  // Fetch the branchId from the URL
+  const branchId = getQueryParam('branchId');
 
   if (!branchId) {
     alert("No branchId found. Please log in again.");
     window.location.href = '/login'; // Redirect to login if no branchId
   } else {
-    // Fetch product list for the employee's branch
+    // Fetch product list for the employee's branch using the branchId
     fetch(`http://localhost:8080/api/products/branch/${branchId}`)
             .then(response => response.json())
             .then(data => {
@@ -61,5 +68,6 @@
     document.getElementById('productInfo').style.display = 'block';
   }
 </script>
+
 </body>
 </html>

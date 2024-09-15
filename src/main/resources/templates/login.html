@@ -1,6 +1,55 @@
-<form method="POST" action="/login">
-  <input type="text" name="username" />
-  <input type="password" name="password" />
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<form id="loginForm" method="POST" action="/login">
+  <input type="text" name="username" id="username" placeholder="Username" required />
+  <input type="password" name="password" id="password" placeholder="Password" required />
   <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
   <button type="submit">Login</button>
 </form>
+
+<script>
+  const loginForm = document.getElementById('loginForm');
+
+  loginForm.addEventListener('submit', function (event) {
+    event.preventDefault(); // Prevent the default form submission
+
+    const formData = new FormData(loginForm);
+    const username = formData.get('username');
+    const password = formData.get('password');
+    const csrfToken = document.querySelector('input[name="_csrf"]').value;
+
+    // Send the login request via fetch
+    fetch('/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRF-Token': csrfToken // Include the CSRF token in the headers
+      },
+      body: new URLSearchParams({
+        'username': username,
+        'password': password
+      }),
+      credentials: 'include' // Make sure credentials like cookies are included
+    })
+            .then(response => {
+              if (response.ok) {
+                return response.json(); // Assuming the back-end sends branchId in JSON
+              } else {
+                throw new Error('Login failed');
+              }
+            })
+            .then(data => {
+              // Assuming data contains the branchId
+              const branchId = data.branchId;
+              if (branchId) {
+                // Redirect to the infopage with branchId as a query parameter
+                window.location.href = `/infopage?branchId=${branchId}`;
+              } else {
+                throw new Error('Branch ID missing in the response');
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Login failed: Invalid credentials or server error.');
+            });
+  });
+</script>
