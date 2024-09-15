@@ -24,6 +24,11 @@ public class ProductService {
         Optional<Product> product = productRepository.findById(id);
         return product.orElse(null); // Return the product if found, otherwise return null
     }
+
+    public List<Product> getProductsByBranchId(Long branchId) {
+        return productRepository.findByBranchId(branchId);
+    }
+
     public Product addProduct(Product product, Long branchId) {
         Branch branch = branchRepository.findById(branchId)
                 .orElseThrow(() -> new RuntimeException("Branch not found"));

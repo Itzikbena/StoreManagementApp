@@ -16,6 +16,12 @@ public class ProductController {
         return productService.addProduct(product, branchId);
     }
 
+    @GetMapping("/branch/{branchId}")
+    public List<Product> getProductsByBranchId(@PathVariable Long branchId) {
+        return productService.getProductsByBranchId(branchId);
+    }
+
+
     @Autowired
     private ProductService productService;
 

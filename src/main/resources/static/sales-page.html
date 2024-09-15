@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sales Page</title>
+</head>
+<body>
+<h2>Make a Sale</h2>
+
+<label for="products">Select Product:</label>
+<select id="products"></select>
+<br><br>
+
+<label for="quantity">Quantity:</label>
+<input type="number" id="quantity" name="quantity" required>
+<br><br>
+
+<label for="customers">Select Customer:</label>
+<select id="customers"></select>
+<br><br>
+
+<button id="sellButton">Sell</button>
+
+<button id="newCustomerButton">New Customer</button>
+
+<div id="newCustomerForm" style="display:none;">
+  <h3>Add New Customer</h3>
+  <label for="customerName">Name:</label>
+  <input type="text" id="customerName">
+  <br><br>
+  <label for="customerEmail">Email:</label>
+  <input type="email" id="customerEmail">
+  <br><br>
+  <button id="createCustomer">Create</button>
+</div>
+
+<div id="message"></div>
+
+<script>
+  document.getElementById('sellButton').addEventListener('click', () => {
+    const productId = document.getElementById('products').value;
+    const quantity = document.getElementById('quantity').value;
+    const customerId = document.getElementById('customers').value;
+
+    fetch('http://localhost:8080/admin/sales/sell', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId, quantity, customerId })
+    })
+            .then(response => response.json())
+            .then(data => {
+              document.getElementById('message').textContent = data.message;
+            });
+  });
+
+  document.getElementById('newCustomerButton').addEventListener('click', () => {
+    document.getElementById('newCustomerForm').style.display = 'block';
+  });
+
+  document.getElementById('createCustomer').addEventListener('click', () => {
+    const name = document.getElementById('customerName').value;
+    const email = document.getElementById('customerEmail').value;
+
+    fetch('http://localhost:8080/admin/customers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email })
+    })
+            .then(response => response.json())
+            .then(data => {
+              // Refresh customer list
+              loadCustomers();
+            });
+  });
+
+  // Function to load customers
+  function loadCustomers() {
+    fetch('http://localhost:8080/admin/customers')
+            .then(response => response.json())
+            .then(data => {
+              const customerSelect = document.getElementById('customers');
+              customerSelect.innerHTML = '';  // Clear previous options
+              data.forEach(customer => {
+                const option = document.createElement('option');
+                option.value = customer.id;
+                option.textContent = customer.name;
+                customerSelect.appendChild(option);
+              });
+            });
+  }
+
+  // Call loadCustomers on page load
+  loadCustomers();
+</script>
+</body>
+</html>
