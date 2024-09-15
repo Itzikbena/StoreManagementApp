@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/admin/sales")
@@ -32,9 +34,11 @@ public class SaleController {
     private SaleRepository saleRepository;
 
     @PostMapping("/sell")
-    public ResponseEntity<?> sellProduct(@RequestParam Long employeeId, @RequestParam Long productId,
-                                         @RequestParam Long branchId, @RequestParam int quantity,
-                                         @RequestParam Long customerId) {
+    public ResponseEntity<Map<String, Object>> sellProduct(@RequestParam Long employeeId, @RequestParam Long productId,
+                                                           @RequestParam Long branchId, @RequestParam int quantity,
+                                                           @RequestParam Long customerId) {
+        Map<String, Object> response = new HashMap<>();
+
         // Find Employee, Product, Branch, and Customer
         User employee = userService.findById(employeeId);
         Product product = productService.findById(productId);
@@ -42,7 +46,9 @@ public class SaleController {
         Customer customer = customerService.findById(customerId);
 
         if (employee == null || product == null || branch == null || customer == null) {
-            return ResponseEntity.badRequest().body("Employee, Product, Branch, or Customer not found.");
+            response.put("success", false);
+            response.put("message", "Employee, Product, Branch, or Customer not found.");
+            return ResponseEntity.badRequest().body(response);
         }
 
         // Update product stock after sale
@@ -65,9 +71,17 @@ public class SaleController {
             // Save the Sale record
             saleRepository.save(sale);
 
-            return ResponseEntity.ok("Product sold successfully.");
+            // Return success response with sale details
+            response.put("success", true);
+            response.put("message", "Product sold successfully.");
+            response.put("sale", sale); // Include the sale object in the response if needed
+            return ResponseEntity.ok(response);
         } else {
-            return ResponseEntity.badRequest().body("Sale failed: insufficient stock or product not found.");
+            // Failed to update stock
+            response.put("success", false);
+            response.put("message", "Sale failed: insufficient stock or product not found.");
+            return ResponseEntity.badRequest().body(response);
         }
     }
+
 }

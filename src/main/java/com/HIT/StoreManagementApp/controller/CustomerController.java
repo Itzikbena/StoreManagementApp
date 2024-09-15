@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/admin/customers")
 public class CustomerController {
@@ -20,5 +22,10 @@ public class CustomerController {
         return ResponseEntity.ok(createdCustomer);
     }
 
-    // Optionally, you can add more endpoints like fetching customers, updating, deleting, etc.
+    // New endpoint to fetch all customers
+    @GetMapping
+    public ResponseEntity<List<Customer>> getAllCustomers() {
+        List<Customer> customers = customerService.getAllCustomers();
+        return ResponseEntity.ok(customers);
+    }
 }

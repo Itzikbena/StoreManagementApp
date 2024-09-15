@@ -1,72 +1,272 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Product Info</title>
+  <title>מלאי בסניף</title>
   <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
     #productInfo {
-      display: none;
       margin-top: 20px;
+    }
+    #cartTable, #customerList {
+      margin-top: 40px;
     }
   </style>
 </head>
 <body>
 
-<h2>Products List</h2>
-<ul id="productList"></ul>
+<h2>מלאי בסניף</h2>
+<p id="branchName"></p>
 
-<div id="productInfo">
-  <h3>Product Details</h3>
-  <p id="productName"></p>
-  <p id="productPrice"></p>
-  <p id="productQuantity"></p>
+<table id="inventoryTable">
+  <thead>
+  <tr>
+    <th>Index</th>
+    <th>מין</th>
+    <th>שם המוצר</th>
+    <th>קטגוריה</th>
+    <th>מידה</th>
+    <th>כמות</th>
+    <th>מחיר ליחידה</th>
+    <th>הוסף לסל</th>
+  </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+
+<h2>סל הקניות</h2>
+<table id="cartTable">
+  <thead>
+  <tr>
+    <th>שם המוצר</th>
+    <th>כמות</th>
+    <th>מחיר</th>
+  </tr>
+  </thead>
+  <tbody>
+  </tbody>
+</table>
+
+<h2>לקוחות</h2>
+<select id="customerList">
+  <option value="">בחר לקוח</option>
+</select>
+<button id="addNewCustomer">הוסף לקוח חדש</button>
+
+<button id="purchaseButton">בצע רכישה</button>
+
+<!-- Modal to add new customer -->
+<div id="newCustomerModal" style="display: none;">
+  <h3>הוסף לקוח חדש</h3>
+  <label>שם:</label>
+  <input type="text" id="newCustomerName"><br>
+  <label>דואר אלקטרוני:</label>
+  <input type="email" id="newCustomerEmail"><br>
+  <button id="saveCustomer">שמור</button>
 </div>
 
 <script>
+  let cart = [];
+
   // Function to get query parameters from the URL
   function getQueryParam(param) {
     const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(param);
+    const paramValue = urlParams.get(param);
+    console.log(`Query parameter ${param}: ${paramValue}`);  // Debugging
+    return paramValue;
   }
 
-  // Fetch the branchId from the URL
+  // Fetch the branchId and userId from the URL
   const branchId = getQueryParam('branchId');
+  const userId = getQueryParam('userId');  // Get userId
 
-  if (!branchId) {
-    alert("No branchId found. Please log in again.");
-    window.location.href = '/login'; // Redirect to login if no branchId
+  console.log(`Branch ID: ${branchId}, User ID: ${userId}`);  // Debugging
+
+  if (!branchId || !userId) {
+    alert("No branchId or userId found. Please log in again.");
+    window.location.href = '/login'; // Redirect to login if no branchId or userId
   } else {
-    // Fetch product list for the employee's branch using the branchId
+    // Fetch product list for the employee's branch
     fetch(`http://localhost:8080/api/products/branch/${branchId}`)
-            .then(response => response.json())
+            .then(response => {
+              console.log('Fetching products...');  // Debugging
+              return response.json();
+            })
             .then(data => {
-              const productList = document.getElementById('productList');
+              console.log('Products fetched:', data);  // Debugging
+              const tableBody = document.querySelector('#inventoryTable tbody');
+              const branchNameElement = document.getElementById('branchName');
 
-              if (data.length === 0) {
-                productList.textContent = "No products found for this branch.";
+              // Assuming all products are from the same branch, show branch name once
+              if (data.length > 0) {
+                branchNameElement.textContent = `שם הסניף: ${data[0].branch.name}, מיקום: ${data[0].branch.location}`;
               } else {
-                data.forEach(product => {
-                  const li = document.createElement('li');
-                  li.textContent = product.name;
-                  li.style.cursor = 'pointer';
-                  li.addEventListener('click', () => showProductInfo(product));
-                  productList.appendChild(li);
-                });
+                console.log('No products found for the branch');  // Debugging
               }
+
+              data.forEach((product, index) => {
+                console.log(`Adding product to table: ${product.name} with index ${index + 1}`);  // Debugging
+                const row = document.createElement('tr');
+
+                row.innerHTML = `
+            <td>${index + 1}</td>
+            <td>${product.type}</td>
+            <td>${product.name}</td>
+            <td>${product.category}</td>
+            <td>${product.size}</td>
+            <td>${product.quantity}</td>
+            <td>₪${product.price.toFixed(2)}</td>
+            <td><button onclick="addToCart(${index + 1}, '${product.name}', ${product.price})">+</button></td>
+          `;
+
+                tableBody.appendChild(row);
+              });
             })
             .catch(error => {
-              console.error('Error fetching products:', error);
+              console.error('Error fetching products:', error);  // Debugging
             });
+
+    // Fetch the customer list
+    fetch('http://localhost:8080/admin/customers')
+            .then(response => {
+              console.log('Fetching customers...');  // Debugging
+              return response.json();
+            })
+            .then(customers => {
+              console.log('Customers fetched:', customers);  // Debugging
+              const customerList = document.getElementById('customerList');
+
+              customers.forEach(customer => {
+                console.log(`Adding customer to list: ${customer.name}`);  // Debugging
+                const option = document.createElement('option');
+                option.value = customer.id;
+                option.textContent = customer.name;
+                customerList.appendChild(option);
+              });
+            })
+            .catch(error => console.error('Error fetching customers:', error));  // Debugging
   }
 
-  // Function to display the selected product's information
-  function showProductInfo(product) {
-    document.getElementById('productName').textContent = 'Name: ' + product.name;
-    document.getElementById('productPrice').textContent = 'Price: $' + product.price;
-    document.getElementById('productQuantity').textContent = 'Quantity: ' + product.quantity;
-    document.getElementById('productInfo').style.display = 'block';
+  // Function to add product to cart
+  function addToCart(productId, productName, productPrice) {
+    console.log(`Adding to cart - Product ID: ${productId}, Name: ${productName}, Price: ${productPrice}`);  // Debugging
+    const cartTableBody = document.querySelector('#cartTable tbody');
+    const cartItem = {
+      id: productId,  // Store the productId
+      name: productName,
+      price: productPrice,
+      quantity: 1
+    };
+
+    cart.push(cartItem);
+    console.log('Cart updated:', cart);  // Debugging
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${productName}</td>
+      <td>1</td>
+      <td>₪${productPrice.toFixed(2)}</td>
+    `;
+    cartTableBody.appendChild(row);
   }
+
+  // Handle purchase execution
+  document.getElementById('purchaseButton').addEventListener('click', () => {
+    const selectedCustomer = document.getElementById('customerList').value;
+
+    if (!selectedCustomer) {
+      alert('Please select a customer before making a purchase.');
+      return;
+    }
+
+    // Function to handle sequential POST requests
+    const makePurchase = (cart, index) => {
+      if (index >= cart.length) {
+        // All items processed, show success message
+        alert('רכישה בוצעה בהצלחה');
+        return;
+      }
+
+      const item = cart[index];
+
+      fetch(`http://localhost:8080/admin/sales/sell?employeeId=${userId}&productId=${item.id}&branchId=${branchId}&quantity=${item.quantity}&customerId=${selectedCustomer}`, {
+        method: 'POST'
+      })
+              .then(response => {
+                if (response.ok) {
+                  console.log('Purchase successful for product:', item.name);  // Debugging
+                } else {
+                  console.error('Error during purchase:', response);
+                  alert('שגיאה במהלך הרכישה');
+                }
+
+                // Proceed to the next item in the cart
+                makePurchase(cart, index + 1);
+              })
+              .catch(error => {
+                console.error('Purchase failed:', error);
+                alert('שגיאה במהלך הרכישה');
+              });
+    };
+
+    // Start processing the first item in the cart
+    makePurchase(cart, 0);
+  });
+
+  // Show modal to add new customer
+  document.getElementById('addNewCustomer').addEventListener('click', () => {
+    console.log('Showing new customer modal');  // Debugging
+    document.getElementById('newCustomerModal').style.display = 'block';
+  });
+
+  // Save new customer
+  document.getElementById('saveCustomer').addEventListener('click', () => {
+    const name = document.getElementById('newCustomerName').value;
+    const email = document.getElementById('newCustomerEmail').value;
+
+    console.log(`Saving new customer - Name: ${name}, Email: ${email}`);  // Debugging
+
+    fetch('http://localhost:8080/admin/customers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: name,
+        email: email
+      })
+    })
+            .then(response => {
+              console.log('Customer saved successfully');  // Debugging
+              return response.json();
+            })
+            .then(customer => {
+              console.log('New customer added:', customer);  // Debugging
+              const customerList = document.getElementById('customerList');
+              const option = document.createElement('option');
+              option.value = customer.id;
+              option.textContent = customer.name;
+              customerList.appendChild(option);
+
+              // Hide the modal after saving
+              document.getElementById('newCustomerModal').style.display = 'none';
+            })
+            .catch(error => console.error('Error adding customer:', error));  // Debugging
+  });
+
 </script>
 
 </body>

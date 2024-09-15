@@ -28,24 +28,29 @@ public class LoginController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Long>> login(@RequestParam String username,
-                                                   @RequestParam String password,
-                                                   HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> login(@RequestParam String username, @RequestParam String password, HttpServletRequest request) {
         User user = userService.validateUser(username, password);
+        Map<String, Object> response = new HashMap<>();
+
         if (user != null) {
             Long branchId = user.getBranch().getId();
+            Long userId = user.getId();  // Get the user's ID (employee ID)
 
-            // Store branchId and username in session
+            // Set session attributes (if needed)
             request.getSession().setAttribute("branchId", branchId);
             request.getSession().setAttribute("username", username);
+            request.getSession().setAttribute("userId", userId);  // Save user ID to session if needed
 
-            // Return branchId in the response JSON
-            Map<String, Long> response = new HashMap<>();
+            // Add branchId and userId to the response
             response.put("branchId", branchId);
-            return ResponseEntity.ok(response);  // Return the branchId as JSON
+            response.put("userId", userId);
+
+            // Return the response as JSON
+            return ResponseEntity.ok(response);
         } else {
-            // If invalid credentials, return 401 Unauthorized
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            // Add error message to the response
+            response.put("error", "Invalid username or password");
+            return ResponseEntity.badRequest().body(response);
         }
     }
 }

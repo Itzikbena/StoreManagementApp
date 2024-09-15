@@ -9,11 +9,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 public class InfoPageController {
 
     @GetMapping("/infopage")
-    public String infopage(@RequestParam("branchId") Long branchId, Model model) {
-        // Add branchId to the model so it can be used in the template
+    public String infopage(@RequestParam("branchId") Long branchId, @RequestParam("userId") Long userId, Model model) {
+        // Add branchId and userId to the model so it can be used in the template
         model.addAttribute("branchId", branchId);
+        model.addAttribute("userId", userId);
 
         // Return the name of the template (infopage.html)
         return "infopage";
     }
+
 }

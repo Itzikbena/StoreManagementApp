@@ -32,19 +32,21 @@
     })
             .then(response => {
               if (response.ok) {
-                return response.json(); // Assuming the back-end sends branchId in JSON
+                return response.json(); // Assuming the back-end sends branchId and userId in JSON
               } else {
                 throw new Error('Login failed');
               }
             })
             .then(data => {
-              // Assuming data contains the branchId
+              // Assuming data contains both branchId and userId
               const branchId = data.branchId;
-              if (branchId) {
-                // Redirect to the infopage with branchId as a query parameter
-                window.location.href = `/infopage?branchId=${branchId}`;
+              const userId = data.userId;
+
+              if (branchId && userId) {
+                // Redirect to the infopage with branchId and userId as query parameters
+                window.location.href = `/infopage?branchId=${branchId}&userId=${userId}`;
               } else {
-                throw new Error('Branch ID missing in the response');
+                throw new Error('Branch ID or User ID missing in the response');
               }
             })
             .catch(error => {
