@@ -22,10 +22,21 @@ public class CustomerController {
         return ResponseEntity.ok(createdCustomer);
     }
 
-    // New endpoint to fetch all customers
+    // Endpoint to fetch all customers
     @GetMapping
     public ResponseEntity<List<Customer>> getAllCustomers() {
         List<Customer> customers = customerService.getAllCustomers();
         return ResponseEntity.ok(customers);
+    }
+
+    // New endpoint to fetch a customer by ID
+    @GetMapping("/{id}")
+    public ResponseEntity<Customer> getCustomerById(@PathVariable Long id) {
+        Customer customer = customerService.findById(id);
+        if (customer != null) {
+            return ResponseEntity.ok(customer);
+        } else {
+            return ResponseEntity.notFound().build(); // Return 404 if customer not found
+        }
     }
 }

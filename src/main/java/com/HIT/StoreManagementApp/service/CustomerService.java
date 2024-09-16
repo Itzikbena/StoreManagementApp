@@ -11,6 +11,10 @@ import java.util.Optional;
 @Service
 public class CustomerService {
 
+    public void save(Customer customer) {
+        customerRepository.save(customer); // Assuming customerRepository is injected
+    }
+
     @Autowired
     private CustomerRepository customerRepository;
 

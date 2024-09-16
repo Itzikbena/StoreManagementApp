@@ -56,7 +56,7 @@ public class SaleController {
 
         if (success) {
             // Calculate the sale price (twice the quantity sold)
-            double price = product.getPrice() * 2 * quantity;
+            double price = product.getPrice() * quantity;
 
             // Create a new Sale record
             Sale sale = new Sale();
@@ -67,6 +67,12 @@ public class SaleController {
             sale.setQuantity(quantity);
             sale.setPrice(price);
             sale.setSaleTime(LocalDateTime.now());
+
+            // Process sale and increment customer purchases
+            sale.processSale();
+
+            // Save the updated customer (with incremented purchases)
+            customerService.save(customer); // Save updated customer
 
             // Save the Sale record
             saleRepository.save(sale);

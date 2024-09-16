@@ -15,7 +15,8 @@ public class Customer {
     private long passport;
     private long phone;
 
-    private String type; // Corrected type to String
+    private String type = "New"; // Default type is "New"
+    private int purchases = 0; // New field to track the number of purchases
 
     private String name;
     private String email;
@@ -50,12 +51,20 @@ public class Customer {
         this.phone = phone;
     }
 
-    public String getType() { // Corrected return type to String
+    public String getType() {
         return type;
     }
 
-    public void setType(String type) { // Corrected parameter type to String
+    public void setType(String type) {
         this.type = type;
+    }
+
+    public int getPurchases() {
+        return purchases;
+    }
+
+    public void setPurchases(int purchases) {
+        this.purchases = purchases;
     }
 
     public String getName() {
@@ -80,5 +89,15 @@ public class Customer {
 
     public void setSales(List<Sale> sales) {
         this.sales = sales;
+    }
+
+    // Method to increment purchases and update customer type
+    public void incrementPurchases() {
+        this.purchases++;
+        if (this.purchases == 2) {
+            this.type = "circular";
+        } else if (this.purchases >= 3) {
+            this.type = "vip";
+        }
     }
 }

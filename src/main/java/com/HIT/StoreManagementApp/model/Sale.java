@@ -24,7 +24,7 @@ public class Sale {
     private Branch branch;
 
     @ManyToOne
-    @JoinColumn(name = "customer_id") // Adding customer relationship
+    @JoinColumn(name = "customer_id")
     private Customer customer;
 
     private int quantity;
@@ -95,5 +95,12 @@ public class Sale {
 
     public void setSaleTime(LocalDateTime saleTime) {
         this.saleTime = saleTime;
+    }
+
+    // Method to process the sale and update the customer's purchases
+    public void processSale() {
+        if (this.customer != null) {
+            this.customer.incrementPurchases();
+        }
     }
 }

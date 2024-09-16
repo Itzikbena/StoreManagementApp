@@ -24,6 +24,34 @@
     #cartTable, #customerList {
       margin-top: 40px;
     }
+    /* Modal styles */
+    #newCustomerModal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    #newCustomerModal h3 {
+      margin-top: 0;
+    }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+    #priceSummary {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -62,22 +90,34 @@
 </table>
 
 <h2>לקוחות</h2>
-<select id="customerList">
+<select id="customerList" onchange="updatePriceSummary()"> <!-- Call updatePriceSummary when customer is selected -->
   <option value="">בחר לקוח</option>
 </select>
 <button id="addNewCustomer">הוסף לקוח חדש</button>
 
+<div id="priceSummary">
+  <p>סה"כ לפני הנחה: ₪<span id="totalPrice">0.00</span></p>
+  <p>הנחה: ₪<span id="discountAmount">0.00</span></p>
+  <p>סה"כ לאחר הנחה: ₪<span id="finalPrice">0.00</span></p>
+</div>
+
 <button id="purchaseButton">בצע רכישה</button>
 
 <!-- Modal to add new customer -->
-<div id="newCustomerModal" style="display: none;">
+<div id="newCustomerModal">
   <h3>הוסף לקוח חדש</h3>
   <label>שם:</label>
-  <input type="text" id="newCustomerName"><br>
+  <input type="text" id="newCustomerName" placeholder="הכנס שם"><br>
   <label>דואר אלקטרוני:</label>
-  <input type="email" id="newCustomerEmail"><br>
+  <input type="email" id="newCustomerEmail" placeholder="הכנס דואר אלקטרוני"><br>
+  <label>מספר דרכון:</label>
+  <input type="text" id="newCustomerPassport" placeholder="הכנס מספר דרכון"><br>
+  <label>מספר טלפון:</label>
+  <input type="text" id="newCustomerPhone" placeholder="הכנס מספר טלפון"><br>
   <button id="saveCustomer">שמור</button>
+  <button id="closeModal">סגור</button>
 </div>
+<div class="modal-overlay"></div>
 
 <script>
   let cart = [];
@@ -85,16 +125,12 @@
   // Function to get query parameters from the URL
   function getQueryParam(param) {
     const urlParams = new URLSearchParams(window.location.search);
-    const paramValue = urlParams.get(param);
-    console.log(`Query parameter ${param}: ${paramValue}`);  // Debugging
-    return paramValue;
+    return urlParams.get(param);
   }
 
   // Fetch the branchId and userId from the URL
   const branchId = getQueryParam('branchId');
   const userId = getQueryParam('userId');  // Get userId
-
-  console.log(`Branch ID: ${branchId}, User ID: ${userId}`);  // Debugging
 
   if (!branchId || !userId) {
     alert("No branchId or userId found. Please log in again.");
@@ -102,26 +138,17 @@
   } else {
     // Fetch product list for the employee's branch
     fetch(`http://localhost:8080/api/products/branch/${branchId}`)
-            .then(response => {
-              console.log('Fetching products...');  // Debugging
-              return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-              console.log('Products fetched:', data);  // Debugging
               const tableBody = document.querySelector('#inventoryTable tbody');
               const branchNameElement = document.getElementById('branchName');
 
-              // Assuming all products are from the same branch, show branch name once
               if (data.length > 0) {
                 branchNameElement.textContent = `שם הסניף: ${data[0].branch.name}, מיקום: ${data[0].branch.location}`;
-              } else {
-                console.log('No products found for the branch');  // Debugging
               }
 
               data.forEach((product, index) => {
-                console.log(`Adding product to table: ${product.name} with index ${index + 1}`);  // Debugging
                 const row = document.createElement('tr');
-
                 row.innerHTML = `
             <td>${index + 1}</td>
             <td>${product.type}</td>
@@ -132,48 +159,37 @@
             <td>₪${product.price.toFixed(2)}</td>
             <td><button onclick="addToCart(${index + 1}, '${product.name}', ${product.price})">+</button></td>
           `;
-
                 tableBody.appendChild(row);
               });
             })
-            .catch(error => {
-              console.error('Error fetching products:', error);  // Debugging
-            });
+            .catch(error => console.error('Error fetching products:', error));
 
     // Fetch the customer list
     fetch('http://localhost:8080/admin/customers')
-            .then(response => {
-              console.log('Fetching customers...');  // Debugging
-              return response.json();
-            })
+            .then(response => response.json())
             .then(customers => {
-              console.log('Customers fetched:', customers);  // Debugging
               const customerList = document.getElementById('customerList');
-
               customers.forEach(customer => {
-                console.log(`Adding customer to list: ${customer.name}`);  // Debugging
                 const option = document.createElement('option');
                 option.value = customer.id;
                 option.textContent = customer.name;
                 customerList.appendChild(option);
               });
             })
-            .catch(error => console.error('Error fetching customers:', error));  // Debugging
+            .catch(error => console.error('Error fetching customers:', error));
   }
 
   // Function to add product to cart
   function addToCart(productId, productName, productPrice) {
-    console.log(`Adding to cart - Product ID: ${productId}, Name: ${productName}, Price: ${productPrice}`);  // Debugging
     const cartTableBody = document.querySelector('#cartTable tbody');
     const cartItem = {
-      id: productId,  // Store the productId
+      id: productId,
       name: productName,
       price: productPrice,
       quantity: 1
     };
 
     cart.push(cartItem);
-    console.log('Cart updated:', cart);  // Debugging
     const row = document.createElement('tr');
     row.innerHTML = `
       <td>${productName}</td>
@@ -181,7 +197,93 @@
       <td>₪${productPrice.toFixed(2)}</td>
     `;
     cartTableBody.appendChild(row);
+
+    // Update the total price
+    updatePriceSummary();
   }
+
+  // Function to calculate the total price and discount
+  function updatePriceSummary() {
+    const totalPriceElement = document.getElementById('totalPrice');
+    const discountAmountElement = document.getElementById('discountAmount');
+    const finalPriceElement = document.getElementById('finalPrice');
+    const selectedCustomer = document.getElementById('customerList').value;
+
+    if (!selectedCustomer) {
+      return; // No customer selected, skip the price calculation
+    }
+
+    // Fetch customer details to get their type
+    fetch(`http://localhost:8080/admin/customers/${selectedCustomer}`)
+            .then(response => response.json())
+            .then(customer => {
+              let discount = 0;
+
+              // Determine discount based on customer type
+              if (customer.type === 'Circular') {
+                discount = 0.05; // 5% discount for Circular customers
+              } else if (customer.type === 'vip' || customer.type.toLowerCase() === 'vip') {
+                discount = 0.15; // 15% discount for VIP customers
+              }
+
+              // Calculate total price
+              let totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+              let discountAmount = totalPrice * discount;
+              let finalPrice = totalPrice - discountAmount;
+
+              // Update the DOM with price summary
+              totalPriceElement.textContent = totalPrice.toFixed(2);
+              discountAmountElement.textContent = discountAmount.toFixed(2);
+              finalPriceElement.textContent = finalPrice.toFixed(2);
+            })
+            .catch(error => console.error('Error fetching customer for discount:', error));
+  }
+
+  // Show modal to add new customer
+  document.getElementById('addNewCustomer').addEventListener('click', () => {
+    document.querySelector('.modal-overlay').style.display = 'block';
+    document.getElementById('newCustomerModal').style.display = 'block';
+  });
+
+  // Close modal
+  document.getElementById('closeModal').addEventListener('click', () => {
+    document.querySelector('.modal-overlay').style.display = 'none';
+    document.getElementById('newCustomerModal').style.display = 'none';
+  });
+
+  // Save new customer
+  document.getElementById('saveCustomer').addEventListener('click', () => {
+    const name = document.getElementById('newCustomerName').value;
+    const email = document.getElementById('newCustomerEmail').value;
+    const passport = document.getElementById('newCustomerPassport').value;
+    const phone = document.getElementById('newCustomerPhone').value;
+    const type = "New"; // Default type
+
+    fetch('http://localhost:8080/admin/customers', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        passport: passport,
+        phone: phone,
+        type: type,
+        name: name,
+        email: email
+      })
+    })
+            .then(response => response.json())
+            .then(customer => {
+              const customerList = document.getElementById('customerList');
+              const option = document.createElement('option');
+              option.value = customer.id;
+              option.textContent = customer.name;
+              customerList.appendChild(option);
+              document.querySelector('.modal-overlay').style.display = 'none'; // Hide modal
+              document.getElementById('newCustomerModal').style.display = 'none';
+            })
+            .catch(error => console.error('Error adding customer:', error));
+  });
 
   // Handle purchase execution
   document.getElementById('purchaseButton').addEventListener('click', () => {
@@ -192,79 +294,50 @@
       return;
     }
 
-    // Function to handle sequential POST requests
-    const makePurchase = (cart, index) => {
-      if (index >= cart.length) {
-        // All items processed, show success message
-        alert('רכישה בוצעה בהצלחה');
-        return;
-      }
+    // Fetch customer details to get their type
+    fetch(`http://localhost:8080/admin/customers/${selectedCustomer}`)
+            .then(response => response.json())
+            .then(customer => {
+              let discount = 0;
 
-      const item = cart[index];
+              // Determine discount based on customer type
+              if (customer.type === 'Circular') {
+                discount = 0.05; // 5% discount
+              } else if (customer.type === 'VIP') {
+                discount = 0.15; // 15% discount
+              }
 
-      fetch(`http://localhost:8080/admin/sales/sell?employeeId=${userId}&productId=${item.id}&branchId=${branchId}&quantity=${item.quantity}&customerId=${selectedCustomer}`, {
-        method: 'POST'
-      })
-              .then(response => {
-                if (response.ok) {
-                  console.log('Purchase successful for product:', item.name);  // Debugging
-                } else {
-                  console.error('Error during purchase:', response);
-                  alert('שגיאה במהלך הרכישה');
+              // Process each item in the cart
+              const makePurchase = (cart, index) => {
+                if (index >= cart.length) {
+                  alert('רכישה בוצעה בהצלחה');
+                  return;
                 }
 
-                // Proceed to the next item in the cart
-                makePurchase(cart, index + 1);
-              })
-              .catch(error => {
-                console.error('Purchase failed:', error);
-                alert('שגיאה במהלך הרכישה');
-              });
-    };
+                const item = cart[index];
+                const discountedPrice = item.price * (1 - discount); // Apply discount
 
-    // Start processing the first item in the cart
-    makePurchase(cart, 0);
-  });
+                fetch(`http://localhost:8080/admin/sales/sell?employeeId=${userId}&productId=${item.id}&branchId=${branchId}&quantity=${item.quantity}&customerId=${selectedCustomer}`, {
+                  method: 'POST'
+                })
+                        .then(response => {
+                          if (response.ok) {
+                            console.log(`Purchase successful for product: ${item.name}`);
+                          } else {
+                            console.error('Error during purchase:', response);
+                            alert('שגיאה במהלך הרכישה');
+                          }
+                          makePurchase(cart, index + 1); // Proceed to next item
+                        })
+                        .catch(error => {
+                          console.error('Purchase failed:', error);
+                          alert('שגיאה במהלך הרכישה');
+                        });
+              };
 
-  // Show modal to add new customer
-  document.getElementById('addNewCustomer').addEventListener('click', () => {
-    console.log('Showing new customer modal');  // Debugging
-    document.getElementById('newCustomerModal').style.display = 'block';
-  });
-
-  // Save new customer
-  document.getElementById('saveCustomer').addEventListener('click', () => {
-    const name = document.getElementById('newCustomerName').value;
-    const email = document.getElementById('newCustomerEmail').value;
-
-    console.log(`Saving new customer - Name: ${name}, Email: ${email}`);  // Debugging
-
-    fetch('http://localhost:8080/admin/customers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: name,
-        email: email
-      })
-    })
-            .then(response => {
-              console.log('Customer saved successfully');  // Debugging
-              return response.json();
-            })
-            .then(customer => {
-              console.log('New customer added:', customer);  // Debugging
-              const customerList = document.getElementById('customerList');
-              const option = document.createElement('option');
-              option.value = customer.id;
-              option.textContent = customer.name;
-              customerList.appendChild(option);
-
-              // Hide the modal after saving
-              document.getElementById('newCustomerModal').style.display = 'none';
-            })
-            .catch(error => console.error('Error adding customer:', error));  // Debugging
+              // Start processing the first item in the cart
+              makePurchase(cart, 0);
+            });
   });
 
 </script>
