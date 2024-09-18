@@ -30,6 +30,7 @@ public class SecurityConfig {
         this.customUserDetailsService = customUserDetailsService; // Injecting CustomUserDetailsService
     }
 
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -38,7 +39,7 @@ public class SecurityConfig {
     @Bean
     public DaoAuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(customUserDetailsService); // Use injected customUserDetailsService
+        authProvider.setUserDetailsService(customUserDetailsService);
         authProvider.setPasswordEncoder(passwordEncoder());
         return authProvider;
     }
@@ -56,31 +57,35 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/login"),
                                 new AntPathRequestMatcher("/api/**"),
                                 new AntPathRequestMatcher("/admin/**"),
-                                new AntPathRequestMatcher("/chat/**")  // Ignore CSRF for WebSocket endpoints
+                                new AntPathRequestMatcher("/chat/**")
                         )
                 )
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        .requestMatchers("/login").permitAll()  // Allow access to login page
-                        .requestMatchers("/infopage").authenticated()  // Require authentication for infopage
-                        .requestMatchers("/admin/**").hasRole("ADMIN")  // Allow only ADMIN to access admin URLs
-                        .requestMatchers("/employee/**").hasAnyRole("ADMIN", "EMPLOYEE")  // Allow both ADMIN and EMPLOYEE
-                        .requestMatchers("/chat/**").permitAll()  // Allow all access to WebSocket endpoints
-                        .anyRequest().authenticated()  // All other requests must be authenticated
+                        .requestMatchers("/login").permitAll()  // Allow access to the login page and custom POST login
+                        .requestMatchers("/infopage").authenticated()  // Protect the infopage
+                        .requestMatchers("/admin/**").hasRole("ADMIN")  // Admin access
+                        .requestMatchers("/employee/**").hasAnyRole("ADMIN", "EMPLOYEE")  // Employee access
+                        .requestMatchers("/chat/**").permitAll()  // Open chat to everyone
+                        .anyRequest().authenticated()  // Everything else requires authentication
                 )
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .formLogin(formLogin -> formLogin
-                        .loginPage("/login")  // Specify the custom login page URL
-                        .defaultSuccessUrl("/infopage", true)  // Redirect to /infopage after successful login
-                        .successHandler(successHandler())  // Use custom success handler for additional logic
-                        .permitAll()  // Allow access to the login page for all users
+                            .successHandler(successHandler())  // Use custom success handler for additional logic
                 )
-                .httpBasic(withDefaults())  // Enable Basic Authentication
+                .httpBasic(withDefaults())
                 .logout(logout -> logout
                         .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
                         .permitAll()
                 )
-                .authenticationProvider(authenticationProvider())
+                .authenticationProvider(authenticationProvider())  // Use custom authentication provider
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)  // Ensure session is created and maintained
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                )
+                .headers(headers -> headers
+                        .addHeaderWriter((request, response) -> {
+                            response.setHeader("X-Frame-Options", "ALLOWALL");  // Allow iframes
+                        })
                 );
 
         return http.build();
@@ -92,10 +97,9 @@ public class SecurityConfig {
             CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
             Long branchId = user.getBranchId();
             Long userId = user.getId();
-
-            // Redirect to /infopage with branchId and userId as query parameters
             response.sendRedirect("/infopage?branchId=" + branchId + "&userId=" + userId);
         };
     }
-
 }
+
+

@@ -1,6 +1,10 @@
 package com.HIT.StoreManagementApp.model;
 
 import jakarta.persistence.*;
+import org.springframework.security.core.GrantedAuthority;
+
+import java.util.Collection;
+import java.util.Collections;
 
 @Entity
 public class User {
@@ -33,6 +37,8 @@ public class User {
     public void setId(Long id) {
         this.id = id;
     }
+
+
 
     public String getUsername() {
         return username;
@@ -97,5 +103,9 @@ public class User {
 
     public void setPhone(long phone) {
         this.phone = phone;
+    }
+
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        return Collections.singleton(() -> "ROLE_" + this.role); // Single role for simplicity
     }
 }

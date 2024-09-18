@@ -21,7 +21,25 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final Map<String, String> activeUsers = new ConcurrentHashMap<>();
+    private final Set<String> activeUsers = new HashSet<>();
+
+    // Method for user login
+    @MessageMapping("/userLogin")
+    @SendTo("/topic/activeUsers")
+    public List<String> handleUserLogin(ChatMessage message) {
+        activeUsers.add(message.getUsername());  // Add user to active users set
+        return new ArrayList<>(activeUsers);     // Return list of active users
+    }
+
+    // Method for user logout
+    @MessageMapping("/userLogout")
+    @SendTo("/topic/activeUsers")
+    public List<String> handleUserLogout(ChatMessage message) {
+        activeUsers.remove(message.getUsername());  // Remove user from active users set
+        return new ArrayList<>(activeUsers);        // Return updated list of active users
+    }
+
+
 
     public ChatController(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
@@ -58,25 +76,5 @@ public class ChatController {
         } else {
             System.out.println("Recipient is null or empty.");
         }
-    }
-
-
-    @MessageMapping("/userLogin")
-    @SendTo("/topic/activeUsers")
-    public List<String> userLogin(ChatMessage message) {
-        // Assuming activeUsers is a map
-        activeUsers.put(message.getUsername(), message.getUsername());
-
-        // Return the list of usernames (values from the map)
-        return new ArrayList<>(activeUsers.keySet());  // Or values if you store usernames as values
-    }
-
-
-
-    @MessageMapping("/userLogout")
-    @SendTo("/topic/activeUsers")
-    public Map<String, String> userLogout(ChatMessage chatMessage) {
-        activeUsers.remove(chatMessage.getUsername());
-        return activeUsers;  // Broadcast the updated list of active users
     }
 }

@@ -25,43 +25,39 @@
       position: fixed;
       bottom: 80px;
       right: 20px;
-      width: 300px;
-      background-color: white;
+      width: 90%; /* Adjust width to fit better on different screen sizes */
+      max-width: 400px; /* Maximum width to avoid being too large */
+      background-color: rgba(255, 255, 255, 0.9);
       border: 1px solid #ccc;
       display: none;
+      z-index: 999;
+      max-height: 70%; /* Constrain the height so it won't exceed the browser height */
+      overflow-y: auto; /* Allow scrolling if the content exceeds the window height */
     }
 
     #onlineUsers {
-      height: 400px;
+      height: 200px; /* Adjust height */
+      max-height: 40%; /* Make the user list responsive */
       overflow-y: auto;
       padding: 10px;
-      border: 1px solid #ccc;
-      background-color: #fafafa; /* Temporary for visibility */
+      background-color: rgba(255, 255, 255, 0.5);
     }
-
 
     #messages {
       height: 200px;
+      max-height: 40%; /* Make the messages section responsive */
       overflow-y: auto;
       padding: 10px;
+      background-color: rgba(255, 255, 255, 0.5);
     }
 
-    #messageInput, #privateMessageInput {
+
+    #messageInput {
       width: 80%;
     }
 
     #chatArea {
       padding: 10px;
-    }
-
-    .privateChatWindow {
-      position: fixed;
-      bottom: 80px;
-      right: 340px; /* adjust based on how many chat windows you want to open */
-      width: 300px;
-      background-color: white;
-      border: 1px solid #ccc;
-      display: none;
     }
 
     .onlineUser {
@@ -72,13 +68,15 @@
 </head>
 <body>
 
-<!-- Small chat icon (Facebook-like) -->
+<!-- Chat Icon (Facebook-like) -->
 <div id="chatIcon" onclick="toggleChatWindow()">💬</div>
 
 <!-- Main chat window -->
 <div id="chatWindow">
   <h3>Online Users</h3>
-  <div id="onlineUsers"></div>
+  <!-- This is where the active users list will be shown -->
+  <div id="onlineUsers" style="height: 400px; overflow-y: auto; padding: 10px; background-color: rgba(255, 255, 255, 0.5);"></div>
+
   <div id="chatArea">
     <h4>Public Chat</h4>
     <div id="messages"></div>
@@ -87,90 +85,99 @@
   </div>
 </div>
 
+
 <!-- Include SockJS and Stomp.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.3.0/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 
 <script>
   let stompClient = null;
-  let username = null; // Username will be set based on the authentication session
+  let username = null;
 
   // Toggle chat window visibility
   function toggleChatWindow() {
     const chatWindow = document.getElementById('chatWindow');
     chatWindow.style.display = chatWindow.style.display === 'none' ? 'block' : 'none';
+    console.log("Chat window toggled. Current display status:", chatWindow.style.display);
   }
 
   // Connect to WebSocket as soon as the page loads
   window.onload = function () {
+    console.log("Page loaded, connecting to WebSocket...");
     connectToChat();
   };
 
-  // Connect to WebSocket and subscribe to public and private message channels
+  // Connect to WebSocket and subscribe to channels
   function connectToChat() {
-    const socket = new SockJS('/chat-websocket'); // WebSocket endpoint
+    console.log("Attempting WebSocket connection...");
+    const socket = new SockJS('/chat-websocket');
     stompClient = Stomp.over(socket);
 
     stompClient.connect({}, function (frame) {
-      console.log('Connected: ' + frame);
+      console.log('Connected to WebSocket: ' + frame);
 
       // Fetch the username from the session (set by backend)
       fetch('/api/getUsername')
-              .then(response => response.json())
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error('Failed to fetch username');
+                }
+                return response.json();
+              })
               .then(data => {
-                username = data.username;  // Store the username from session
+                username = data.username;
                 console.log("Logged in as: " + username);
 
                 // Subscribe to public messages
                 stompClient.subscribe('/topic/messages', function (message) {
+                  console.log("Received public message:", message.body);
                   showMessage(JSON.parse(message.body));
                 });
 
                 // Subscribe to private messages sent to this user
                 stompClient.subscribe('/user/queue/messages', function (message) {
+                  console.log("Received private message:", message.body);
                   showPrivateMessage(JSON.parse(message.body));
                 });
 
+                // Subscribe to active users and update the list
                 stompClient.subscribe('/topic/activeUsers', function (message) {
                   const users = JSON.parse(message.body);
-                  console.log("Received active users:", users); // Debugging log
+                  console.log("Received active users list:", users);  // Debugging log to verify the message
                   updateActiveUsers(users);
                 });
 
-
                 // Notify the server that the user has logged in
                 stompClient.send("/app/userLogin", {}, JSON.stringify({'username': username}));
+              })
+              .catch(error => {
+                console.error('Error fetching username or during WebSocket connection:', error);
               });
+    }, function (error) {
+      console.error('WebSocket connection failed:', error);
     });
   }
 
   // Send public message
   function sendMessage() {
     const messageContent = document.getElementById('messageInput').value;
+    console.log("Attempting to send message:", messageContent);
+
     if (messageContent && stompClient) {
       stompClient.send("/app/sendToUser", {}, JSON.stringify({
-        'username': username,  // Sender's username
+        'username': username,
         'message': messageContent
       }));
+      console.log("Message sent:", messageContent);
       document.getElementById('messageInput').value = ''; // Clear input
+    } else {
+      console.warn("Message sending failed: No content or WebSocket connection not established.");
     }
   }
-
-  // Send private message
-  function sendPrivateMessage(recipient) {
-    const privateMessageContent = prompt("Type your message to " + recipient);
-    if (privateMessageContent && stompClient) {
-      stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify({
-        'username': username,  // Sender's username
-        'message': privateMessageContent,
-        'recipient': recipient  // Use the correct recipient's username, not an index
-      }));
-    }
-  }
-
 
   // Display public message
   function showMessage(message) {
+    console.log("Displaying public message:", message);
     const messageElement = document.createElement('div');
     messageElement.innerText = message.username + ": " + message.message;
     document.getElementById('messages').appendChild(messageElement);
@@ -178,22 +185,23 @@
 
   // Display private message
   function showPrivateMessage(message) {
+    console.log("Displaying private message:", message);
     const messageElement = document.createElement('div');
     messageElement.innerHTML = "<strong>Private:</strong> " + message.username + ": " + message.message;
     document.getElementById('messages').appendChild(messageElement);
   }
 
-  // Update the list of active users for private messaging
+  // Update the UI with the active users
   function updateActiveUsers(users) {
     const onlineUsersDiv = document.getElementById('onlineUsers');
     onlineUsersDiv.innerHTML = ''; // Clear the list
 
-    users.forEach(user => {  // Ensure we iterate over the actual usernames
+    users.forEach(user => {
       const userElement = document.createElement('div');
       userElement.classList.add('onlineUser');
-      userElement.innerText = user;  // Use the actual username
+      userElement.innerText = user;  // Display username
       userElement.onclick = function() {
-        openPrivateChat(user);  // Pass the correct username for private chat
+        openPrivateChat(user);  // Pass the username for private chat
       };
       onlineUsersDiv.appendChild(userElement);
     });
@@ -202,13 +210,20 @@
   }
 
 
-
-
-
-  // Open a private chat window with the selected user
+  // Open private chat with selected user
   function openPrivateChat(recipient) {
-    // Prompt for private message
-    sendPrivateMessage(recipient);
+    console.log("Opening private chat with:", recipient);
+    const privateMessageContent = prompt("Type your message to " + recipient);
+    if (privateMessageContent && stompClient) {
+      stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify({
+        'username': username,
+        'message': privateMessageContent,
+        'recipient': recipient
+      }));
+      console.log("Private message sent to", recipient);
+    } else {
+      console.warn("Private message sending failed: No content or WebSocket connection not established.");
+    }
   }
 </script>
 
