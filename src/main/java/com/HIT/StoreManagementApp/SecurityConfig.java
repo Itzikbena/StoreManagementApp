@@ -8,6 +8,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -66,12 +67,21 @@ public class SecurityConfig {
                         .requestMatchers("/chat/**").permitAll()  // Allow all access to WebSocket endpoints
                         .anyRequest().authenticated()  // All other requests must be authenticated
                 )
+                .formLogin(formLogin -> formLogin
+                        .loginPage("/login")  // Specify the custom login page URL
+                        .defaultSuccessUrl("/infopage", true)  // Redirect to /infopage after successful login
+                        .successHandler(successHandler())  // Use custom success handler for additional logic
+                        .permitAll()  // Allow access to the login page for all users
+                )
                 .httpBasic(withDefaults())  // Enable Basic Authentication
                 .logout(logout -> logout
                         .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
                         .permitAll()
                 )
-                .authenticationProvider(authenticationProvider());
+                .authenticationProvider(authenticationProvider())
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)  // Ensure session is created and maintained
+                );
 
         return http.build();
     }
@@ -79,10 +89,7 @@ public class SecurityConfig {
     @Bean
     public AuthenticationSuccessHandler successHandler() {
         return (request, response, authentication) -> {
-            // Retrieve the User object from the authenticated principal
             CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
-
-            // Retrieve branchId and userId
             Long branchId = user.getBranchId();
             Long userId = user.getId();
 
@@ -90,4 +97,5 @@ public class SecurityConfig {
             response.sendRedirect("/infopage?branchId=" + branchId + "&userId=" + userId);
         };
     }
+
 }

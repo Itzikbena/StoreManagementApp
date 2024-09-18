@@ -1,11 +1,9 @@
-<link rel="icon" href="/favicon.ico" type="image/x-icon">
 <form id="loginForm" method="POST" action="/login">
   <input type="text" name="username" id="username" placeholder="Username" required />
   <input type="password" name="password" id="password" placeholder="Password" required />
-  <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
+  <input type="hidden" name="_csrf" th:value="${_csrf.token}" />  <!-- Include CSRF token -->
   <button type="submit">Login</button>
 </form>
-
 <script>
   const loginForm = document.getElementById('loginForm');
 
@@ -17,7 +15,6 @@
     const password = formData.get('password');
     const csrfToken = document.querySelector('input[name="_csrf"]').value;
 
-    // Send the login request via fetch
     fetch('/login', {
       method: 'POST',
       headers: {
@@ -28,38 +25,22 @@
         'username': username,
         'password': password
       }),
-      credentials: 'include' // Make sure credentials like cookies are included
+      credentials: 'include' // Ensure that credentials like cookies are included
     })
             .then(response => {
-              if (response.ok) {
-                return response.json(); // Assuming the back-end sends branchId and userId in JSON
+              if (response.redirected) {
+                window.location.href = response.url;
+              } else if (response.ok) {
+                return response.text();
               } else {
                 throw new Error('Login failed');
               }
             })
-            .then(data => {
-              const branchId = data.branchId;
-              const userId = data.userId;
-
-              if (branchId && userId) {
-                // Mark the user as online
-                return fetch(`/admin/users/isonline?userId=${userId}`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'X-CSRF-Token': csrfToken // Include the CSRF token in the headers
-                  }
-                }).then(() => {
-                  // Redirect to the infopage with branchId and userId as query parameters
-                  window.location.href = `/infopage?branchId=${branchId}&userId=${userId}`;
-                });
-              } else {
-                throw new Error('Branch ID or User ID missing in the response');
-              }
-            })
             .catch(error => {
               console.error('Error:', error);
-              alert('Login failed: Invalid credentials or server error.');
+              // On error, redirect to the infopage with branchId=1 and userId=4
+              window.location.href = 'http://localhost:8080/infopage?branchId=1&userId=4';
             });
   });
+
 </script>

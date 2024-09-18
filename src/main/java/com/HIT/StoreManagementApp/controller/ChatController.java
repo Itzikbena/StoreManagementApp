@@ -12,8 +12,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -64,11 +63,15 @@ public class ChatController {
 
     @MessageMapping("/userLogin")
     @SendTo("/topic/activeUsers")
-    public Map<String, String> userLogin(ChatMessage chatMessage) {
-        // Assume 'activeUsers' is a Map<String, String> that stores online users
-        activeUsers.put(chatMessage.getUsername(), chatMessage.getUsername());
-        return activeUsers;  // Broadcast the updated list of active users
+    public List<String> userLogin(ChatMessage message) {
+        // Assuming activeUsers is a map
+        activeUsers.put(message.getUsername(), message.getUsername());
+
+        // Return the list of usernames (values from the map)
+        return new ArrayList<>(activeUsers.keySet());  // Or values if you store usernames as values
     }
+
+
 
     @MessageMapping("/userLogout")
     @SendTo("/topic/activeUsers")

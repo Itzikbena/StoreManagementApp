@@ -4,23 +4,87 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat Test</title>
+  <style>
+    #chatIcon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background-color: #007bff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+
+    #chatWindow {
+      position: fixed;
+      bottom: 80px;
+      right: 20px;
+      width: 300px;
+      background-color: white;
+      border: 1px solid #ccc;
+      display: none;
+    }
+
+    #onlineUsers {
+      height: 400px;
+      overflow-y: auto;
+      padding: 10px;
+      border: 1px solid #ccc;
+      background-color: #fafafa; /* Temporary for visibility */
+    }
+
+
+    #messages {
+      height: 200px;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    #messageInput, #privateMessageInput {
+      width: 80%;
+    }
+
+    #chatArea {
+      padding: 10px;
+    }
+
+    .privateChatWindow {
+      position: fixed;
+      bottom: 80px;
+      right: 340px; /* adjust based on how many chat windows you want to open */
+      width: 300px;
+      background-color: white;
+      border: 1px solid #ccc;
+      display: none;
+    }
+
+    .onlineUser {
+      cursor: pointer;
+      color: blue;
+    }
+  </style>
 </head>
 <body>
-<h2>Welcome to Chat</h2>
 
-<!-- Chat area -->
-<div id="chatArea">
-  <h3>Messages</h3>
-  <div id="messages"></div>
-  <input type="text" id="messageInput" placeholder="Type a message">
-  <button onclick="sendMessage()">Send</button>
+<!-- Small chat icon (Facebook-like) -->
+<div id="chatIcon" onclick="toggleChatWindow()">💬</div>
 
-  <h3>Send Private Message</h3>
-  <select id="recipientSelect">
-    <!-- Users will be dynamically added here -->
-  </select>
-  <input type="text" id="privateMessageInput" placeholder="Type a private message">
-  <button onclick="sendPrivateMessage()">Send Private Message</button>
+<!-- Main chat window -->
+<div id="chatWindow">
+  <h3>Online Users</h3>
+  <div id="onlineUsers"></div>
+  <div id="chatArea">
+    <h4>Public Chat</h4>
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="Type a public message">
+    <button onclick="sendMessage()">Send</button>
+  </div>
 </div>
 
 <!-- Include SockJS and Stomp.js -->
@@ -30,6 +94,12 @@
 <script>
   let stompClient = null;
   let username = null; // Username will be set based on the authentication session
+
+  // Toggle chat window visibility
+  function toggleChatWindow() {
+    const chatWindow = document.getElementById('chatWindow');
+    chatWindow.style.display = chatWindow.style.display === 'none' ? 'block' : 'none';
+  }
 
   // Connect to WebSocket as soon as the page loads
   window.onload = function () {
@@ -61,10 +131,12 @@
                   showPrivateMessage(JSON.parse(message.body));
                 });
 
-                // Subscribe to the list of active users
                 stompClient.subscribe('/topic/activeUsers', function (message) {
-                  updateActiveUsers(JSON.parse(message.body));
+                  const users = JSON.parse(message.body);
+                  console.log("Received active users:", users); // Debugging log
+                  updateActiveUsers(users);
                 });
+
 
                 // Notify the server that the user has logged in
                 stompClient.send("/app/userLogin", {}, JSON.stringify({'username': username}));
@@ -85,18 +157,17 @@
   }
 
   // Send private message
-  function sendPrivateMessage() {
-    const recipient = document.getElementById('recipientSelect').value;
-    const privateMessageContent = document.getElementById('privateMessageInput').value;
-    if (privateMessageContent && recipient && stompClient) {
+  function sendPrivateMessage(recipient) {
+    const privateMessageContent = prompt("Type your message to " + recipient);
+    if (privateMessageContent && stompClient) {
       stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify({
         'username': username,  // Sender's username
         'message': privateMessageContent,
-        'recipient': recipient  // Recipient's username
+        'recipient': recipient  // Use the correct recipient's username, not an index
       }));
-      document.getElementById('privateMessageInput').value = ''; // Clear input
     }
   }
+
 
   // Display public message
   function showMessage(message) {
@@ -114,19 +185,32 @@
 
   // Update the list of active users for private messaging
   function updateActiveUsers(users) {
-    const recipientSelect = document.getElementById('recipientSelect');
-    recipientSelect.innerHTML = ''; // Clear the list
+    const onlineUsersDiv = document.getElementById('onlineUsers');
+    onlineUsersDiv.innerHTML = ''; // Clear the list
 
-    // Add each connected user to the dropdown
-    for (const user in users) {
-      const optionElement = document.createElement('option');
-      optionElement.value = users[user]; // Set the value as the username
-      optionElement.innerText = users[user]; // Display the username
-      recipientSelect.appendChild(optionElement);
-    }
+    users.forEach(user => {  // Ensure we iterate over the actual usernames
+      const userElement = document.createElement('div');
+      userElement.classList.add('onlineUser');
+      userElement.innerText = user;  // Use the actual username
+      userElement.onclick = function() {
+        openPrivateChat(user);  // Pass the correct username for private chat
+      };
+      onlineUsersDiv.appendChild(userElement);
+    });
 
     console.log("Active users updated:", users); // Debugging log
   }
+
+
+
+
+
+  // Open a private chat window with the selected user
+  function openPrivateChat(recipient) {
+    // Prompt for private message
+    sendPrivateMessage(recipient);
+  }
 </script>
+
 </body>
 </html>

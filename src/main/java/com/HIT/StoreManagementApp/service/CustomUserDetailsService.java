@@ -21,13 +21,10 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + username));
 
-        // Ensure the role has the correct "ROLE_" prefix, avoid duplicating "ROLE_" prefix.
+        // Ensure the role has the correct "ROLE_" prefix
         String role = user.getRole().startsWith("ROLE_") ? user.getRole() : "ROLE_" + user.getRole();
 
-        return org.springframework.security.core.userdetails.User
-                .withUsername(user.getUsername())
-                .password(user.getPassword())
-                .roles(role.replace("ROLE_", ""))  // Use the role without "ROLE_" prefix
-                .build();
+        // Return your custom CustomUserDetails object, passing the role
+        return new CustomUserDetails(user, role);
     }
 }

@@ -9,10 +9,13 @@ import java.util.Collection;
 import java.util.Collections;
 
 public class CustomUserDetails implements UserDetails {
-    private final User user;
 
-    public CustomUserDetails(User user) {
+    private final User user;
+    private final String role;  // Role with correct prefix
+
+    public CustomUserDetails(User user, String role) {
         this.user = user;
+        this.role = role;  // Store the role with the "ROLE_" prefix
     }
 
     public Long getId() {
@@ -20,13 +23,13 @@ public class CustomUserDetails implements UserDetails {
     }
 
     public Long getBranchId() {
-        return user.getBranch() != null ? user.getBranch().getId() : null;  // Ensure branch exists
+        return user.getBranch().getId();
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Convert the user's role into a GrantedAuthority object
-        return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()));
+        // Return the role as a GrantedAuthority
+        return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 
     @Override
@@ -41,21 +44,21 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isAccountNonExpired() {
-        return true;  // Customize as needed
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;  // Customize as needed
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true;  // Customize as needed
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return true;  // Customize as needed
+        return true;
     }
 }
