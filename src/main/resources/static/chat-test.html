@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Test</title>
+</head>
+<body>
+<h2>Welcome to Chat</h2>
+
+<!-- Chat area -->
+<div id="chatArea">
+  <h3>Messages</h3>
+  <div id="messages"></div>
+  <input type="text" id="messageInput" placeholder="Type a message">
+  <button onclick="sendMessage()">Send</button>
+
+  <h3>Send Private Message</h3>
+  <select id="recipientSelect">
+    <!-- Users will be dynamically added here -->
+  </select>
+  <input type="text" id="privateMessageInput" placeholder="Type a private message">
+  <button onclick="sendPrivateMessage()">Send Private Message</button>
+</div>
+
+<!-- Include SockJS and Stomp.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.3.0/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script>
+  let stompClient = null;
+  let username = null; // Username will be set based on the authentication session
+
+  // Connect to WebSocket as soon as the page loads
+  window.onload = function () {
+    connectToChat();
+  };
+
+  // Connect to WebSocket and subscribe to public and private message channels
+  function connectToChat() {
+    const socket = new SockJS('/chat-websocket'); // WebSocket endpoint
+    stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, function (frame) {
+      console.log('Connected: ' + frame);
+
+      // Fetch the username from the session (set by backend)
+      fetch('/api/getUsername')
+              .then(response => response.json())
+              .then(data => {
+                username = data.username;  // Store the username from session
+                console.log("Logged in as: " + username);
+
+                // Subscribe to public messages
+                stompClient.subscribe('/topic/messages', function (message) {
+                  showMessage(JSON.parse(message.body));
+                });
+
+                // Subscribe to private messages sent to this user
+                stompClient.subscribe('/user/queue/messages', function (message) {
+                  showPrivateMessage(JSON.parse(message.body));
+                });
+
+                // Subscribe to the list of active users
+                stompClient.subscribe('/topic/activeUsers', function (message) {
+                  updateActiveUsers(JSON.parse(message.body));
+                });
+
+                // Notify the server that the user has logged in
+                stompClient.send("/app/userLogin", {}, JSON.stringify({'username': username}));
+              });
+    });
+  }
+
+  // Send public message
+  function sendMessage() {
+    const messageContent = document.getElementById('messageInput').value;
+    if (messageContent && stompClient) {
+      stompClient.send("/app/sendToUser", {}, JSON.stringify({
+        'username': username,  // Sender's username
+        'message': messageContent
+      }));
+      document.getElementById('messageInput').value = ''; // Clear input
+    }
+  }
+
+  // Send private message
+  function sendPrivateMessage() {
+    const recipient = document.getElementById('recipientSelect').value;
+    const privateMessageContent = document.getElementById('privateMessageInput').value;
+    if (privateMessageContent && recipient && stompClient) {
+      stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify({
+        'username': username,  // Sender's username
+        'message': privateMessageContent,
+        'recipient': recipient  // Recipient's username
+      }));
+      document.getElementById('privateMessageInput').value = ''; // Clear input
+    }
+  }
+
+  // Display public message
+  function showMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.innerText = message.username + ": " + message.message;
+    document.getElementById('messages').appendChild(messageElement);
+  }
+
+  // Display private message
+  function showPrivateMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.innerHTML = "<strong>Private:</strong> " + message.username + ": " + message.message;
+    document.getElementById('messages').appendChild(messageElement);
+  }
+
+  // Update the list of active users for private messaging
+  function updateActiveUsers(users) {
+    const recipientSelect = document.getElementById('recipientSelect');
+    recipientSelect.innerHTML = ''; // Clear the list
+
+    // Add each connected user to the dropdown
+    for (const user in users) {
+      const optionElement = document.createElement('option');
+      optionElement.value = users[user]; // Set the value as the username
+      optionElement.innerText = users[user]; // Display the username
+      recipientSelect.appendChild(optionElement);
+    }
+
+    console.log("Active users updated:", users); // Debugging log
+  }
+</script>
+</body>
+</html>

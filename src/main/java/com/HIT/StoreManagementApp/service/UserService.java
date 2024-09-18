@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;  // Correct import
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -19,6 +19,26 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
 
+    // Update a user in the database
+    public User updateUser(User user) {
+        return userRepository.save(user);
+    }
+
+    public List<User> getAllUsers() {
+        return userRepository.findAll();
+    }
+
+    // Method to find a user by username
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsername(username);  // Returns Optional<User>
+    }
+
+    // Save method
+    public void save(User user) {
+        userRepository.save(user);
+    }
+
+    // Validate user credentials
     public User validateUser(String username, String password) {
         Optional<User> userOptional = userRepository.findByUsername(username);
         if (userOptional.isPresent()) {
@@ -31,11 +51,20 @@ public class UserService {
         return null;  // Return null if the user does not exist or the password does not match
     }
 
-
     // Method to find a User by their ID
     public User findById(Long id) {
         Optional<User> user = userRepository.findById(id);
         return user.orElse(null); // Return the user if found, otherwise return null
+    }
+
+    // **New** Method to find a User by their ID and return Optional<User>
+    public Optional<User> findUserById(Long id) {
+        return userRepository.findById(id);  // Return an Optional<User>
+    }
+
+    // **New** Method to get all users
+    public List<User> findAllUsers() {
+        return userRepository.findAll();  // Return a list of all users
     }
 
     // Create an employee

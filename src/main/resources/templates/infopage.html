@@ -52,6 +52,91 @@
     #priceSummary {
       margin-top: 20px;
     }
+
+    /* Chat styles */
+    #chat-container {
+      position: fixed;
+      bottom: 0;
+      right: 20px;
+      width: 300px;
+      height: 400px;
+      display: none; /* Initially hidden */
+      border: 1px solid #ccc;
+      background-color: white;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+
+    #chat-header {
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    #chat-content {
+      height: 300px;
+      overflow-y: auto;
+      padding: 10px;
+    }
+
+    #chat-input-container {
+      display: flex;
+      padding: 10px;
+    }
+
+    #chat-input {
+      flex-grow: 1;
+      padding: 5px;
+    }
+
+    #send-button {
+      padding: 5px 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    #open-chat-button {
+      position: fixed;
+      bottom: 10px;
+      right: 20px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    /* Styles for the user list */
+    #user-list-container {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      width: 300px;
+      background-color: #f9f9f9;
+      position: fixed;
+      right: 20px;
+      top: 10%;
+    }
+
+    #user-list {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    #user-list li {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      cursor: pointer;
+    }
+
+    #user-list li:hover {
+      background-color: #f2f2f2;
+    }
+
   </style>
 </head>
 <body>
@@ -103,6 +188,27 @@
 
 <button id="purchaseButton">בצע רכישה</button>
 
+<!-- Chat button to open the chat window -->
+<button id="open-chat-button">Open Chat</button>
+
+<!-- Chat container (initially hidden) -->
+<div id="chat-container">
+  <div id="chat-header">Chat Support</div>
+  <div id="chat-content">
+    <p>Welcome to the chat!</p>
+  </div>
+  <div id="chat-input-container">
+    <input type="text" id="chat-input" placeholder="Type your message here...">
+    <button id="send-button">Send</button>
+  </div>
+</div>
+
+<!-- User list container -->
+<div id="user-list-container">
+  <h4>Available Users</h4>
+  <ul id="user-list"></ul>
+</div>
+
 <!-- Modal to add new customer -->
 <div id="newCustomerModal">
   <h3>הוסף לקוח חדש</h3>
@@ -119,8 +225,11 @@
 </div>
 <div class="modal-overlay"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script>
   let cart = [];
+  let currentChatUser = null;
 
   // Function to get query parameters from the URL
   function getQueryParam(param) {
@@ -128,15 +237,14 @@
     return urlParams.get(param);
   }
 
-  // Fetch the branchId and userId from the URL
   const branchId = getQueryParam('branchId');
-  const userId = getQueryParam('userId');  // Get userId
+  const userId = getQueryParam('userId');  // Assume this is the logged-in user's ID
 
   if (!branchId || !userId) {
     alert("No branchId or userId found. Please log in again.");
-    window.location.href = '/login'; // Redirect to login if no branchId or userId
+    window.location.href = '/login';
   } else {
-    // Fetch product list for the employee's branch
+    // Fetch products for the branch
     fetch(`http://localhost:8080/api/products/branch/${branchId}`)
             .then(response => response.json())
             .then(data => {
@@ -164,7 +272,7 @@
             })
             .catch(error => console.error('Error fetching products:', error));
 
-    // Fetch the customer list
+    // Fetch customer list
     fetch('http://localhost:8080/admin/customers')
             .then(response => response.json())
             .then(customers => {
@@ -177,169 +285,97 @@
               });
             })
             .catch(error => console.error('Error fetching customers:', error));
-  }
 
-  // Function to add product to cart
-  function addToCart(productId, productName, productPrice) {
-    const cartTableBody = document.querySelector('#cartTable tbody');
-    const cartItem = {
-      id: productId,
-      name: productName,
-      price: productPrice,
-      quantity: 1
-    };
-
-    cart.push(cartItem);
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${productName}</td>
-      <td>1</td>
-      <td>₪${productPrice.toFixed(2)}</td>
-    `;
-    cartTableBody.appendChild(row);
-
-    // Update the total price
-    updatePriceSummary();
-  }
-
-  // Function to calculate the total price and discount
-  function updatePriceSummary() {
-    const totalPriceElement = document.getElementById('totalPrice');
-    const discountAmountElement = document.getElementById('discountAmount');
-    const finalPriceElement = document.getElementById('finalPrice');
-    const selectedCustomer = document.getElementById('customerList').value;
-
-    if (!selectedCustomer) {
-      return; // No customer selected, skip the price calculation
-    }
-
-    // Fetch customer details to get their type
-    fetch(`http://localhost:8080/admin/customers/${selectedCustomer}`)
+    // Fetch user list for chat
+    fetch('http://localhost:8080/admin/users/list')
             .then(response => response.json())
-            .then(customer => {
-              let discount = 0;
-
-              // Determine discount based on customer type
-              if (customer.type === 'Circular') {
-                discount = 0.05; // 5% discount for Circular customers
-              } else if (customer.type === 'vip' || customer.type.toLowerCase() === 'vip') {
-                discount = 0.15; // 15% discount for VIP customers
-              }
-
-              // Calculate total price
-              let totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-              let discountAmount = totalPrice * discount;
-              let finalPrice = totalPrice - discountAmount;
-
-              // Update the DOM with price summary
-              totalPriceElement.textContent = totalPrice.toFixed(2);
-              discountAmountElement.textContent = discountAmount.toFixed(2);
-              finalPriceElement.textContent = finalPrice.toFixed(2);
+            .then(users => {
+              const userList = document.getElementById('user-list');
+              users.forEach(user => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${user.name || 'Unknown'} (${user.online ? 'Online' : 'Offline'})`;
+                listItem.onclick = () => startChat(user);
+                userList.appendChild(listItem);
+              });
             })
-            .catch(error => console.error('Error fetching customer for discount:', error));
+            .catch(error => console.error('Error fetching users:', error));
   }
 
-  // Show modal to add new customer
-  document.getElementById('addNewCustomer').addEventListener('click', () => {
-    document.querySelector('.modal-overlay').style.display = 'block';
-    document.getElementById('newCustomerModal').style.display = 'block';
+  function startChat(user) {
+    currentChatUser = user;
+    document.getElementById('chat-content').innerHTML = `Chatting with ${user.name}`;
+  }
+
+  const chatButton = document.getElementById('open-chat-button');
+  const chatContainer = document.getElementById('chat-container');
+  const chatHeader = document.getElementById('chat-header');
+
+  chatButton.addEventListener('click', function() {
+    chatContainer.style.display = chatContainer.style.display === 'block' ? 'none' : 'block';
   });
 
-  // Close modal
-  document.getElementById('closeModal').addEventListener('click', () => {
-    document.querySelector('.modal-overlay').style.display = 'none';
-    document.getElementById('newCustomerModal').style.display = 'none';
+  chatHeader.addEventListener('click', function() {
+    chatContainer.style.display = 'none';
   });
 
-  // Save new customer
-  document.getElementById('saveCustomer').addEventListener('click', () => {
-    const name = document.getElementById('newCustomerName').value;
-    const email = document.getElementById('newCustomerEmail').value;
-    const passport = document.getElementById('newCustomerPassport').value;
-    const phone = document.getElementById('newCustomerPhone').value;
-    const type = "New"; // Default type
+  const sendMessageButton = document.getElementById('send-button');
+  sendMessageButton.addEventListener('click', function () {
+    const messageContent = document.getElementById('chat-input').value.trim();
 
-    fetch('http://localhost:8080/admin/customers', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        passport: passport,
-        phone: phone,
-        type: type,
-        name: name,
-        email: email
+    if (messageContent && currentChatUser && currentChatUser.id) {  // Ensure currentChatUser is set and has an id
+      const messagePayload = {
+        content: messageContent,
+        sender: userId,  // Sending userId from current user
+        userId: currentChatUser.id  // Send message to selected chat user by userId
+      };
+
+      // Display the message in the chat immediately
+      showMessage(`You: ${messageContent}`);
+
+      // Send the message to the server
+      fetch(`/chat/sendToUser`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messagePayload),
       })
-    })
-            .then(response => response.json())
-            .then(customer => {
-              const customerList = document.getElementById('customerList');
-              const option = document.createElement('option');
-              option.value = customer.id;
-              option.textContent = customer.name;
-              customerList.appendChild(option);
-              document.querySelector('.modal-overlay').style.display = 'none'; // Hide modal
-              document.getElementById('newCustomerModal').style.display = 'none';
-            })
-            .catch(error => console.error('Error adding customer:', error));
-  });
-
-  // Handle purchase execution
-  document.getElementById('purchaseButton').addEventListener('click', () => {
-    const selectedCustomer = document.getElementById('customerList').value;
-
-    if (!selectedCustomer) {
-      alert('Please select a customer before making a purchase.');
-      return;
-    }
-
-    // Fetch customer details to get their type
-    fetch(`http://localhost:8080/admin/customers/${selectedCustomer}`)
-            .then(response => response.json())
-            .then(customer => {
-              let discount = 0;
-
-              // Determine discount based on customer type
-              if (customer.type === 'Circular') {
-                discount = 0.05; // 5% discount
-              } else if (customer.type === 'VIP') {
-                discount = 0.15; // 15% discount
-              }
-
-              // Process each item in the cart
-              const makePurchase = (cart, index) => {
-                if (index >= cart.length) {
-                  alert('רכישה בוצעה בהצלחה');
-                  return;
+              .then(response => {
+                if (response.ok) {
+                  // Clear the input field after successful send
+                  document.getElementById('chat-input').value = '';
+                } else {
+                  alert('Failed to send message. Please try again.');
                 }
-
-                const item = cart[index];
-                const discountedPrice = item.price * (1 - discount); // Apply discount
-
-                fetch(`http://localhost:8080/admin/sales/sell?employeeId=${userId}&productId=${item.id}&branchId=${branchId}&quantity=${item.quantity}&customerId=${selectedCustomer}`, {
-                  method: 'POST'
-                })
-                        .then(response => {
-                          if (response.ok) {
-                            console.log(`Purchase successful for product: ${item.name}`);
-                          } else {
-                            console.error('Error during purchase:', response);
-                            alert('שגיאה במהלך הרכישה');
-                          }
-                          makePurchase(cart, index + 1); // Proceed to next item
-                        })
-                        .catch(error => {
-                          console.error('Purchase failed:', error);
-                          alert('שגיאה במהלך הרכישה');
-                        });
-              };
-
-              // Start processing the first item in the cart
-              makePurchase(cart, 0);
-            });
+              })
+              .catch(error => {
+                alert('Error sending message.');
+              });
+    } else {
+      alert('Message content or User ID is missing.');
+    }
   });
 
+  // Establish WebSocket connection
+  var socket = new SockJS('/chat-websocket');
+  var stompClient = Stomp.over(socket);
+
+  stompClient.connect({}, function (frame) {
+    console.log('Connected: ' + frame);
+
+    // Subscribe to private messages for this user
+    stompClient.subscribe(`/user/${userId}/queue/messages`, function (messageOutput) {
+      const message = JSON.parse(messageOutput.body);
+      showMessage(`${message.sender}: ${message.content}`);  // Display the received message
+    });
+  });
+
+  function showMessage(message) {
+    var chatContent = document.getElementById('chat-content');
+    var newMessage = document.createElement('p');
+    newMessage.textContent = message;
+    chatContent.appendChild(newMessage);
+  }
 </script>
 
 </body>

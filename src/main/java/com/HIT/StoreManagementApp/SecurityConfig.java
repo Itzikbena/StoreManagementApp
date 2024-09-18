@@ -1,5 +1,6 @@
 package com.HIT.StoreManagementApp;
 
+import com.HIT.StoreManagementApp.service.CustomUserDetails;
 import com.HIT.StoreManagementApp.service.CustomUserDetailsService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 
@@ -18,17 +20,31 @@ import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig  {
+public class SecurityConfig {
 
-    private final CustomUserDetailsService userDetailsService;
+    // Inject the CustomUserDetailsService
+    private final CustomUserDetailsService customUserDetailsService;
 
-    public SecurityConfig(CustomUserDetailsService userDetailsService) {
-        this.userDetailsService = userDetailsService;
+    public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
+        this.customUserDetailsService = customUserDetailsService; // Injecting CustomUserDetailsService
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public DaoAuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(customUserDetailsService); // Use injected customUserDetailsService
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
     }
 
     @Bean
@@ -38,7 +54,8 @@ public class SecurityConfig  {
                         .ignoringRequestMatchers(
                                 new AntPathRequestMatcher("/login"),
                                 new AntPathRequestMatcher("/api/**"),
-                                new AntPathRequestMatcher("/admin/**")
+                                new AntPathRequestMatcher("/admin/**"),
+                                new AntPathRequestMatcher("/chat/**")  // Ignore CSRF for WebSocket endpoints
                         )
                 )
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
@@ -46,6 +63,7 @@ public class SecurityConfig  {
                         .requestMatchers("/infopage").authenticated()  // Require authentication for infopage
                         .requestMatchers("/admin/**").hasRole("ADMIN")  // Allow only ADMIN to access admin URLs
                         .requestMatchers("/employee/**").hasAnyRole("ADMIN", "EMPLOYEE")  // Allow both ADMIN and EMPLOYEE
+                        .requestMatchers("/chat/**").permitAll()  // Allow all access to WebSocket endpoints
                         .anyRequest().authenticated()  // All other requests must be authenticated
                 )
                 .httpBasic(withDefaults())  // Enable Basic Authentication
@@ -59,15 +77,17 @@ public class SecurityConfig  {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
-        return authenticationConfiguration.getAuthenticationManager();
-    }
+    public AuthenticationSuccessHandler successHandler() {
+        return (request, response, authentication) -> {
+            // Retrieve the User object from the authenticated principal
+            CustomUserDetails user = (CustomUserDetails) authentication.getPrincipal();
 
-    @Bean
-    public DaoAuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
+            // Retrieve branchId and userId
+            Long branchId = user.getBranchId();
+            Long userId = user.getId();
+
+            // Redirect to /infopage with branchId and userId as query parameters
+            response.sendRedirect("/infopage?branchId=" + branchId + "&userId=" + userId);
+        };
     }
 }

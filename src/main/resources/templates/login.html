@@ -38,13 +38,21 @@
               }
             })
             .then(data => {
-              // Assuming data contains both branchId and userId
               const branchId = data.branchId;
               const userId = data.userId;
 
               if (branchId && userId) {
-                // Redirect to the infopage with branchId and userId as query parameters
-                window.location.href = `/infopage?branchId=${branchId}&userId=${userId}`;
+                // Mark the user as online
+                return fetch(`/admin/users/isonline?userId=${userId}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-Token': csrfToken // Include the CSRF token in the headers
+                  }
+                }).then(() => {
+                  // Redirect to the infopage with branchId and userId as query parameters
+                  window.location.href = `/infopage?branchId=${branchId}&userId=${userId}`;
+                });
               } else {
                 throw new Error('Branch ID or User ID missing in the response');
               }
