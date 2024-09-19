@@ -71,8 +71,11 @@
 </head>
 <body>
 
-<iframe id="chatIframe" src="http://localhost:8080/chat-test.html" allowtransparency="true"></iframe>
+<div class="container">
+  <button onclick="logout()">Logout</button>
+</div>
 
+<iframe id="chatIframe" src="http://localhost:8080/chat-test.html" allowtransparency="true"></iframe>
 
 <h2>מלאי בסניף</h2>
 <p id="branchName"></p>
@@ -140,6 +143,9 @@
 <script>
   let cart = [];
 
+  function logout() {
+    window.location.href = '/logout';
+  }
 
   // Function to get query parameters from the URL
   function getQueryParam(param) {

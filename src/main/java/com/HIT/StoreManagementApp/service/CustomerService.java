@@ -1,5 +1,6 @@
 package com.HIT.StoreManagementApp.service;
 
+import com.HIT.StoreManagementApp.model.Branch;
 import com.HIT.StoreManagementApp.model.Customer;
 import com.HIT.StoreManagementApp.repository.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;

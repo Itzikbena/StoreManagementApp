@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/admin/branches")  // Mapping the /admin/branches URL to this controller
 public class BranchController {
@@ -23,5 +25,12 @@ public class BranchController {
         // Call the service layer to save the branch to the database
         Branch createdBranch = branchService.createBranch(branch);
         return ResponseEntity.ok(createdBranch);
+    }
+
+    // Method to get all branches from the database
+    @GetMapping("/all")
+    public ResponseEntity<List<Branch>> getAllBranches() {
+        List<Branch> branches = branchService.getAllBranches();
+        return ResponseEntity.ok(branches);
     }
 }

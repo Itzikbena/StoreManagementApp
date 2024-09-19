@@ -1,5 +1,6 @@
 package com.HIT.StoreManagementApp.service;
 
+import com.HIT.StoreManagementApp.model.Branch;
 import com.HIT.StoreManagementApp.model.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,8 +23,14 @@ public class CustomUserDetails implements UserDetails {
         return user.getId();
     }
 
-    public Long getBranchId() {
-        return user.getBranch().getId();
+    // Expose user entity via getter
+    public User getUser() {
+        return user;
+    }
+
+    // You can also provide direct access to the branch if needed
+    public Branch getBranch() {
+        return user.getBranch();  // Assuming User entity has a getBranch method
     }
 
     @Override

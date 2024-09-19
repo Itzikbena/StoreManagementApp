@@ -3,20 +3,15 @@ package com.HIT.StoreManagementApp.controller;
 import com.HIT.StoreManagementApp.model.User;
 import com.HIT.StoreManagementApp.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.ui.Model;  // Correct Model class from Spring framework
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.view.RedirectView;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -25,6 +20,12 @@ public class LoginController {
 
     @Autowired
     private UserService userService;  // Injecting UserService
+
+
+    @GetMapping("/ADMIN")
+    public String adminPage() {
+        return "admin"; // This assumes admin.html is in `src/main/resources/templates`
+    }
 
     @GetMapping("/login")
     public String login() {
