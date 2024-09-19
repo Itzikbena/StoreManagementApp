@@ -149,6 +149,7 @@
   let stompClient = null;
   let username = null;
   let openChatWindows = [];
+  let messageHistory = {}; // Object to store message history for each user
 
   // Toggle chat window visibility
   function toggleChatWindow() {
@@ -159,6 +160,7 @@
   // Connect to WebSocket as soon as the page loads
   window.onload = function () {
     connectToChat();
+    loadAllMessageHistory(); // Load message history from localStorage on page load
   };
 
   // Connect to WebSocket and subscribe to channels
@@ -213,9 +215,14 @@
     document.getElementById('messages').appendChild(messageElement);
   }
 
-  // Display private message
+  // Display private message and save it in the history
   function showPrivateMessage(message) {
-    openPrivateChat(message.username);
+    if (!messageHistory[message.username]) {
+      messageHistory[message.username] = []; // Initialize history if it doesn't exist
+    }
+    messageHistory[message.username].push(message); // Save message to history
+    saveMessageHistory(message.username); // Save to localStorage
+    openPrivateChat(message.username); // Open chat window
     const chatWindow = document.getElementById('privateChat_' + message.username);
     const chatMessages = chatWindow.querySelector('.privateChatMessages');
     const messageElement = document.createElement('div');
@@ -242,7 +249,9 @@
   // Open private chat with selected user
   function openPrivateChat(recipient) {
     // Check if the chat window already exists
-    if (document.getElementById('privateChat_' + recipient)) return;
+    if (document.getElementById('privateChat_' + recipient)) {
+      return;
+    }
 
     const privateChatWindow = document.createElement('div');
     privateChatWindow.id = 'privateChat_' + recipient;
@@ -261,12 +270,15 @@
 
     // Positioning logic
     const positionIndex = openChatWindows.length; // Get the number of open chat windows
-    const baseRight = positionIndex === 0 ? 440 : 110; // First chat window will be 50px (5cm) more to the left
+    const baseRight = positionIndex === 0 ? 440 : 300; // First chat window will be 50px (5cm) more to the left
     privateChatWindow.style.right = (baseRight + positionIndex * 320) + 'px'; // Adjust '320' based on chat window width and spacing
     privateChatWindow.style.bottom = '0px';
 
     document.body.appendChild(privateChatWindow);
     openChatWindows.push(recipient); // Add to the list of open chat windows
+
+    // Load message history if available
+    loadMessageHistory(recipient);
   }
 
   // Send private message to selected user
@@ -274,18 +286,26 @@
     const input = document.getElementById('privateMessageInput_' + recipient);
     const messageContent = input.value;
     if (messageContent && stompClient) {
-      stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify({
+      const message = {
         'username': username,
         'message': messageContent,
         'recipient': recipient
-      }));
+      };
+      stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify(message));
       input.value = ''; // Clear input
 
-      // Add message to chat window
+      // Add message to chat window and save in history
       const chatMessages = document.getElementById('privateChat_' + recipient).querySelector('.privateChatMessages');
       const messageElement = document.createElement('div');
       messageElement.innerText = "Me: " + messageContent;
       chatMessages.appendChild(messageElement);
+
+      // Save message in history
+      if (!messageHistory[recipient]) {
+        messageHistory[recipient] = [];
+      }
+      messageHistory[recipient].push(message);
+      saveMessageHistory(recipient); // Save to localStorage
     }
   }
 
@@ -306,6 +326,34 @@
       const baseRight = index === 0 ? 70 : 20; // Adjust first window to the left
       chatWindow.style.right = (baseRight + index * 320) + 'px'; // Adjust '320' based on chat window width and spacing
     });
+  }
+
+  // Load message history for a recipient
+  function loadMessageHistory(recipient) {
+    if (messageHistory[recipient]) {
+      const chatWindow = document.getElementById('privateChat_' + recipient);
+      const chatMessages = chatWindow.querySelector('.privateChatMessages');
+      messageHistory[recipient].forEach(message => {
+        const messageElement = document.createElement('div');
+        messageElement.innerText = message.username + ": " + message.message;
+        chatMessages.appendChild(messageElement);
+      });
+    }
+  }
+
+  // Save message history to localStorage
+  function saveMessageHistory(recipient) {
+    localStorage.setItem('messageHistory_' + recipient, JSON.stringify(messageHistory[recipient]));
+  }
+
+  // Load all message history from localStorage
+  function loadAllMessageHistory() {
+    for (let key in localStorage) {
+      if (key.startsWith('messageHistory_')) {
+        const recipient = key.replace('messageHistory_', '');
+        messageHistory[recipient] = JSON.parse(localStorage.getItem(key));
+      }
+    }
   }
 </script>
 
