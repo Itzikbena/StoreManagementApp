@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>סטטוס משתמש מחובר</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+    .container {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      direction: rtl; /* מיישר את הטקסט לימין */
+    }
+    .container p {
+      font-size: 1.2em;
+    }
+    .status-message {
+      color: green;
+      font-weight: bold;
+    }
+    .btn {
+      display: inline-block;
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      text-decoration: none;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .btn.logout {
+      background-color: #dc3545; /* צבע אדום לכפתור התנתקות */
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <!-- Hidden CSRF Token Field -->
+  <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
+
+  <p>משתמש עם מזהה: <span id="userId" th:text="${userId}"></span> (<span th:text="${userName}"></span>) כבר מחובר למערכת.</p>
+  <p class="status-message">אנא התנתק ממכשירים אחרים כדי להמשיך.</p>
+  <button class="btn logout" onclick="logoutUser()">התנתק מהמערכת</button>
+  <a href="/login" th:href="@{/login}" class="btn">חזור למסך ההתחברות</a>
+</div>
+
+<script>
+  function logoutUser() {
+    // קבל את מזהה המשתמש מהאלמנט עם ID 'userId'
+    var userId = document.getElementById("userId").textContent.trim();
+
+    // קבל את ה-CSRF טוקן מהאלמנט
+    var csrfToken = document.querySelector('input[name="_csrf"]').value;
+
+    // הצגת מזהה המשתמש וה-CSRF טוקן לצורך בדיקה
+    console.log("User ID: ", userId);
+    console.log("CSRF Token: ", csrfToken);
+
+    // שלח בקשת POST כדי לסמן את המשתמש כלא מחובר
+    fetch('/admin/users/isoffline?userId=' + userId, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken // הוסף את ה-CSRF טוקן
+      }
+    }).then(response => {
+      if (response.ok) {
+        alert('התנתקת בהצלחה.');
+        // הפנה לדף ההתחברות לאחר התנתקות מוצלחת
+        window.location.href = '/login';
+      } else {
+        alert('ההתנתקות נכשלה. אנא נסה שוב.');
+      }
+    }).catch(error => {
+      console.error('Error:', error);
+      alert('ההתנתקות נכשלה. אנא נסה שוב.');
+    });
+  }
+</script>
+</body>
+</html>

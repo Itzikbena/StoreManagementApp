@@ -10,9 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -88,32 +86,5 @@ public class UserController {
         } else {
             return ResponseEntity.badRequest().body("User not found.");
         }
-    }
-
-    // NEW: Get the branchId and userId of the currently authenticated user
-    @GetMapping("/getUserInfo")
-    public ResponseEntity<?> getCurrentUserInfo() {
-        // Get the currently authenticated user
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.isAuthenticated()) {
-            String username = authentication.getName(); // Get the username from the security context
-
-            // Find the user by username
-            Optional<User> userOptional = userService.findByUsername(username);
-            if (userOptional.isPresent()) {
-                User user = userOptional.get();
-                Long branchId = user.getBranch().getId();  // Get user's branchId
-                Long userId = user.getId();  // Get user's userId
-
-                // Prepare the response data
-                Map<String, Object> response = new HashMap<>();
-                response.put("branchId", branchId);
-                response.put("userId", userId);
-
-                // Return the response as JSON
-                return ResponseEntity.ok(response);
-            }
-        }
-        return ResponseEntity.badRequest().body("User not found or not authenticated.");
     }
 }

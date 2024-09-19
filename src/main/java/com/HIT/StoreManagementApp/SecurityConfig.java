@@ -78,6 +78,9 @@ public class SecurityConfig {
                         )
                 )
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+                        .requestMatchers("/alreadyOnline").permitAll()
+                        .requestMatchers("/admin/users/isoffline").permitAll() // Allow everyone to access isoffline
+                        .requestMatchers("/admin/users/isonline").permitAll()  // Allow everyone to access isonline
                         .requestMatchers("/login").permitAll()  // Allow access to the login page and custom POST login
                         .requestMatchers("/infopage").authenticated()  // Protect the infopage
                         .requestMatchers("/admin/**").hasRole("ADMIN")  // Admin access
@@ -88,7 +91,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .formLogin(formLogin -> formLogin
-                            .successHandler(successHandler())  // Use custom success handler for additional logic
+                        .successHandler(successHandler())  // Use custom success handler for additional logic
                 )
                 .httpBasic(withDefaults())
                 .logout(logout -> logout
@@ -114,26 +117,38 @@ public class SecurityConfig {
 
         return (request, response, authentication) -> {
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
-            User user = userDetails.getUser();  // Get the actual User entity
+            User user = userDetails.getUser();
+            String nameuser = userDetails.getUsername(); // Get the actual User entity
             Long userId = user.getId();
             Branch branch = user.getBranch();  // Access the branch via User entity
 
-            // Check if the user has the role 'ROLE_ADMIN'
-            boolean isAdmin = authentication.getAuthorities().stream()
-                    .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+            boolean online = user.isOnline();
 
-            if (isAdmin) {
-                // Log admin access
-                logger.info("Admin access granted for user ID: {}. Redirecting to /ADMIN.", userId);
-                response.sendRedirect("/ADMIN");
-            } else if (branch != null) {
-                // Log non-admin access
-                logger.info("Non-admin user ID: {}. Redirecting to /infopage with branchId: {} and userId: {}", userId, branch.getId(), userId);
-                response.sendRedirect("/infopage?branchId=" + branch.getId() + "&userId=" + userId);
-            } else {
-                // If no branch, handle it gracefully
-                logger.warn("Non-admin user ID: {} does not have a branch assigned. Redirecting to default page.", userId);
-                response.sendRedirect("/default"); // Redirect to a default page or show an error
+
+            if (online) {
+                // Log online status
+                logger.info("User {} is online: {}", userId, online);
+                // If user is online, redirect to alreadyOnline page with userId as a query parameter
+                response.sendRedirect("/alreadyOnline?userId=" + userId + "&userName=" + nameuser);
+            }
+             else {
+                // Check if the user has the role 'ROLE_ADMIN'
+                boolean isAdmin = authentication.getAuthorities().stream()
+                        .anyMatch(grantedAuthority -> grantedAuthority.getAuthority().equals("ROLE_ADMIN"));
+
+                if (isAdmin) {
+                    // Log admin access
+                    logger.info("Admin access granted for user ID: {}. Redirecting to /ADMIN.", userId);
+                    response.sendRedirect("/ADMIN");
+                } else if (branch != null) {
+                    // Log non-admin access
+                    logger.info("Non-admin user ID: {}. Redirecting to /infopage with branchId: {} and userId: {}", userId, branch.getId(), userId);
+                    response.sendRedirect("/infopage?branchId=" + branch.getId() + "&userId=" + userId);
+                } else {
+                    // If no branch, handle it gracefully
+                    logger.warn("Non-admin user ID: {} does not have a branch assigned. Redirecting to default page.", userId);
+                    response.sendRedirect("/default"); // Redirect to a default page or show an error
+                }
             }
         };
     }

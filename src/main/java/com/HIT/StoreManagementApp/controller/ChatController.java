@@ -23,7 +23,10 @@ public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
     private final Set<String> activeUsers = new HashSet<>();
 
-    // Method for user login
+    public ChatController(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
+    }
+
     @MessageMapping("/userLogin")
     @SendTo("/topic/activeUsers")
     public List<String> handleUserLogin(ChatMessage message) {
@@ -31,34 +34,11 @@ public class ChatController {
         return new ArrayList<>(activeUsers);     // Return list of active users
     }
 
-    // Method for user logout
     @MessageMapping("/userLogout")
     @SendTo("/topic/activeUsers")
     public List<String> handleUserLogout(ChatMessage message) {
         activeUsers.remove(message.getUsername());  // Remove user from active users set
         return new ArrayList<>(activeUsers);        // Return updated list of active users
-    }
-
-
-
-    public ChatController(SimpMessagingTemplate messagingTemplate) {
-        this.messagingTemplate = messagingTemplate;
-    }
-
-    @GetMapping("/api/getUsername")
-    @ResponseBody
-    public Map<String, String> getUsername() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();  // Get the authenticated username
-
-        Map<String, String> response = new HashMap<>();
-        response.put("username", username);
-        return response;  // Return the username as JSON
-    }
-    // This method is automatically called after the application context is initialized
-    @EventListener(ContextRefreshedEvent.class)
-    public void init() {
-        // Initialize active user tracking here if needed
     }
 
     @MessageMapping("/sendToUser")
@@ -77,4 +57,21 @@ public class ChatController {
             System.out.println("Recipient is null or empty.");
         }
     }
+
+    @GetMapping("/api/getUsername")
+    @ResponseBody
+    public Map<String, String> getUsername() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String username = authentication.getName();  // Get the authenticated username
+
+        Map<String, String> response = new HashMap<>();
+        response.put("username", username);
+        return response;  // Return the username as JSON
+    }
+
+    @EventListener(ContextRefreshedEvent.class)
+    public void init() {
+        // Initialize active user tracking here if needed
+    }
 }
+

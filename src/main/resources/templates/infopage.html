@@ -75,7 +75,7 @@
   <button onclick="logout()">Logout</button>
 </div>
 
-<iframe id="chatIframe" src="http://localhost:8080/chat-test.html" allowtransparency="true"></iframe>
+<iframe id="chatIframe" src="http://localhost:8080/chat-test.html" style="width: 1200px; height: 800px; border: none;" allowtransparency="true"></iframe>
 
 <h2>מלאי בסניף</h2>
 <p id="branchName"></p>
@@ -143,9 +143,8 @@
 <script>
   let cart = [];
 
-  function logout() {
-    window.location.href = '/logout';
-  }
+  // Store userId globally
+  let userId = getQueryParam('userId');
 
   // Function to get query parameters from the URL
   function getQueryParam(param) {
@@ -153,55 +152,105 @@
     return urlParams.get(param);
   }
 
-  // Fetch the branchId and userId from the URL
+  // Function to logout the user
+  function logout() {
+    if (!userId) {
+      alert('User ID is missing. Please try again.');
+      return;
+    }
+
+    fetch(`/admin/users/isoffline?userId=${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }).then(response => {
+      if (response.ok) {
+        alert('התנתקת בהצלחה.');
+        // Redirect to the login page after successful logout
+        window.location.href = '/login';
+      } else {
+        alert('ההתנתקות נכשלה. אנא נסה שוב.');
+      }
+    }).catch(error => {
+      console.error('Error:', error);
+      alert('ההתנתקות נכשלה. אנא נסה שוב.');
+    });
+  }
+
+  // Fetch the branchId from the URL
   const branchId = getQueryParam('branchId');
-  const userId = getQueryParam('userId');  // Get userId
 
   if (!branchId || !userId) {
     alert("No branchId or userId found. Please log in again.");
     window.location.href = '/login'; // Redirect to login if no branchId or userId
   } else {
-    // Fetch product list for the employee's branch
-    fetch(`http://localhost:8080/api/products/branch/${branchId}`)
-            .then(response => response.json())
-            .then(data => {
-              const tableBody = document.querySelector('#inventoryTable tbody');
-              const branchNameElement = document.getElementById('branchName');
-
-              if (data.length > 0) {
-                branchNameElement.textContent = `שם הסניף: ${data[0].branch.name}, מיקום: ${data[0].branch.location}`;
-              }
-
-              data.forEach((product, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-            <td>${index + 1}</td>
-            <td>${product.type}</td>
-            <td>${product.name}</td>
-            <td>${product.category}</td>
-            <td>${product.size}</td>
-            <td>${product.quantity}</td>
-            <td>₪${product.price.toFixed(2)}</td>
-            <td><button onclick="addToCart(${index + 1}, '${product.name}', ${product.price})">+</button></td>
-          `;
-                tableBody.appendChild(row);
+    // Mark user as online
+    function markUserAsOnline() {
+      fetch(`/admin/users/isonline?userId=${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+              .then(response => {
+                if (response.ok) {
+                  console.log('User marked as online.');
+                } else {
+                  console.error('Failed to mark user as online.');
+                }
+              })
+              .catch(error => {
+                console.error('Error:', error);
               });
-            })
-            .catch(error => console.error('Error fetching products:', error));
+    }
 
-    // Fetch the customer list
-    fetch('http://localhost:8080/admin/customers')
-            .then(response => response.json())
-            .then(customers => {
-              const customerList = document.getElementById('customerList');
-              customers.forEach(customer => {
-                const option = document.createElement('option');
-                option.value = customer.id;
-                option.textContent = customer.name;
-                customerList.appendChild(option);
-              });
-            })
-            .catch(error => console.error('Error fetching customers:', error));
+    // Automatically mark user as online when the page loads
+    window.onload = function() {
+      markUserAsOnline();
+
+      // Fetch product list for the employee's branch
+      fetch(`http://localhost:8080/api/products/branch/${branchId}`)
+              .then(response => response.json())
+              .then(data => {
+                const tableBody = document.querySelector('#inventoryTable tbody');
+                const branchNameElement = document.getElementById('branchName');
+
+                if (data.length > 0) {
+                  branchNameElement.textContent = `שם הסניף: ${data[0].branch.name}, מיקום: ${data[0].branch.location}`;
+                }
+
+                data.forEach((product, index) => {
+                  const row = document.createElement('tr');
+                  row.innerHTML = `
+              <td>${index + 1}</td>
+              <td>${product.type}</td>
+              <td>${product.name}</td>
+              <td>${product.category}</td>
+              <td>${product.size}</td>
+              <td>${product.quantity}</td>
+              <td>₪${product.price.toFixed(2)}</td>
+              <td><button onclick="addToCart(${index + 1}, '${product.name}', ${product.price})">+</button></td>
+            `;
+                  tableBody.appendChild(row);
+                });
+              })
+              .catch(error => console.error('Error fetching products:', error));
+
+      // Fetch the customer list
+      fetch('http://localhost:8080/admin/customers')
+              .then(response => response.json())
+              .then(customers => {
+                const customerList = document.getElementById('customerList');
+                customers.forEach(customer => {
+                  const option = document.createElement('option');
+                  option.value = customer.id;
+                  option.textContent = customer.name;
+                  customerList.appendChild(option);
+                });
+              })
+              .catch(error => console.error('Error fetching customers:', error));
+    }
   }
 
   // Function to add product to cart
@@ -364,7 +413,6 @@
               makePurchase(cart, 0);
             });
   });
-
 </script>
 
 </body>
