@@ -62,6 +62,23 @@
     .onlineUser {
       cursor: pointer;
       color: blue;
+      display: flex;
+      align-items: center;
+    }
+
+    .statusDot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    .online {
+      background-color: green;
+    }
+
+    .offline {
+      background-color: gray;
     }
 
     /* Private chat window styles */
@@ -129,7 +146,7 @@
 
 <!-- Main chat window -->
 <div id="chatWindow">
-  <h3>Online Users</h3>
+  <h3>Users</h3>
   <!-- This is where the active users list will be shown -->
   <div id="onlineUsers"></div>
 
@@ -150,6 +167,8 @@
   let username = null;
   let openChatWindows = [];
   let messageHistory = {}; // Object to store message history for each user
+  let allUsers = []; // List of all users
+  let onlineUsers = []; // List of currently online users
 
   // Toggle chat window visibility
   function toggleChatWindow() {
@@ -159,9 +178,47 @@
 
   // Connect to WebSocket as soon as the page loads
   window.onload = function () {
+    fetchUsers(); // Fetch list of users
     connectToChat();
     loadAllMessageHistory(); // Load message history from localStorage on page load
   };
+
+  // Fetch the list of all users
+  function fetchUsers() {
+    fetch('/admin/users/list')
+            .then(response => response.json())
+            .then(data => {
+              allUsers = data;
+              displayAllUsers(); // Display all users in the onlineUsers div
+            })
+            .catch(error => {
+              console.error('Error fetching user list:', error);
+            });
+  }
+
+  // Display the list of all users with online/offline status
+  function displayAllUsers() {
+    const onlineUsersDiv = document.getElementById('onlineUsers');
+    onlineUsersDiv.innerHTML = ''; // Clear the list
+
+    allUsers.forEach(user => {
+      const userElement = document.createElement('div');
+      userElement.classList.add('onlineUser');
+
+      const statusDot = document.createElement('div');
+      statusDot.classList.add('statusDot');
+      statusDot.classList.add(onlineUsers.includes(user.username) ? 'online' : 'offline');
+
+      userElement.appendChild(statusDot);
+      userElement.appendChild(document.createTextNode(user.username));
+
+      userElement.onclick = function() {
+        openPrivateChat(user.username);  // Open private chat on click
+      };
+
+      onlineUsersDiv.appendChild(userElement);
+    });
+  }
 
   // Connect to WebSocket and subscribe to channels
   function connectToChat() {
@@ -181,19 +238,42 @@
                 });
 
                 // Subscribe to private messages sent to this user
-                stompClient.subscribe('/user/queue/messages', function (message) {
+                stompClient.subscribe(`/user/${username}/queue/messages`, function (message) {
                   showPrivateMessage(JSON.parse(message.body));
                 });
 
                 // Subscribe to active users and update the list
                 stompClient.subscribe('/topic/activeUsers', function (message) {
-                  updateActiveUsers(JSON.parse(message.body));
+                  onlineUsers = JSON.parse(message.body);
+                  updateOnlineStatus();
                 });
 
+                // Fetch missed messages on reconnect
+                fetchMissedMessages();
+
                 // Notify the server that the user has logged in
-                stompClient.send("/app/userLogin", {}, JSON.stringify({'username': username}));
+                stompClient.send("/app/userLogin", {}, JSON.stringify({ 'username': username }));
               });
     });
+  }
+
+  // Fetch missed messages from the server
+  function fetchMissedMessages() {
+    fetch(`/api/missedMessages?username=${username}`)
+            .then(response => response.json())
+            .then(messages => {
+              messages.forEach(message => {
+                showPrivateMessage(message);
+              });
+            })
+            .catch(error => {
+              console.error('Error fetching missed messages:', error);
+            });
+  }
+
+  // Update online/offline status of users
+  function updateOnlineStatus() {
+    displayAllUsers(); // Re-render all users with updated online status
   }
 
   // Send public message
@@ -230,22 +310,6 @@
     chatMessages.appendChild(messageElement);
   }
 
-  // Update the UI with the active users
-  function updateActiveUsers(users) {
-    const onlineUsersDiv = document.getElementById('onlineUsers');
-    onlineUsersDiv.innerHTML = ''; // Clear the list
-
-    users.forEach(user => {
-      const userElement = document.createElement('div');
-      userElement.classList.add('onlineUser');
-      userElement.innerText = user;  // Display username
-      userElement.onclick = function() {
-        openPrivateChat(user);  // Pass the username for private chat
-      };
-      onlineUsersDiv.appendChild(userElement);
-    });
-  }
-
   // Open private chat with selected user
   function openPrivateChat(recipient) {
     // Check if the chat window already exists
@@ -270,7 +334,7 @@
 
     // Positioning logic
     const positionIndex = openChatWindows.length; // Get the number of open chat windows
-    const baseRight = positionIndex === 0 ? 440 : 300; // First chat window will be 50px (5cm) more to the left
+    const baseRight = positionIndex === 0 ? 70 : 20; // First chat window will be 50px (5cm) more to the left
     privateChatWindow.style.right = (baseRight + positionIndex * 320) + 'px'; // Adjust '320' based on chat window width and spacing
     privateChatWindow.style.bottom = '0px';
 

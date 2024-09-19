@@ -80,7 +80,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         .requestMatchers("/alreadyOnline").permitAll()
                         .requestMatchers("/admin/users/isoffline").permitAll() // Allow everyone to access isoffline
-                        .requestMatchers("/admin/users/isonline").permitAll()  // Allow everyone to access isonline
+                        .requestMatchers("/admin/users/isonline").permitAll()
+                        .requestMatchers("/admin/users/list").permitAll() // Allow everyone to access isonline
                         .requestMatchers("/login").permitAll()  // Allow access to the login page and custom POST login
                         .requestMatchers("/infopage").authenticated()  // Protect the infopage
                         .requestMatchers("/admin/**").hasRole("ADMIN")  // Admin access
