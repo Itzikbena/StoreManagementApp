@@ -1,6 +1,9 @@
 package com.HIT.StoreManagementApp.service;
 
+import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
+
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Map;
@@ -12,10 +15,18 @@ public class MessageService {
     // This map simulates the storage of missed messages
     private Map<String, List<String>> missedMessagesStore = new ConcurrentHashMap<>();
 
+    private Map<String, List<Message>> missedMessages = new HashMap<>();
+
+
     // Retrieve missed messages for a specific user
-    public List<String> getMissedMessagesForUser(String username) {
-        // Fetch and return missed messages from the store
-        return missedMessagesStore.getOrDefault(username, new ArrayList<>());
+    public List<Message> getMissedMessages(String username) {
+        List<Message> messages = missedMessages.getOrDefault(username, new ArrayList<>());
+        // Clear messages after retrieving them
+        missedMessages.remove(username);
+        return messages;
+    }
+    public void addMissedMessage(String recipient, Message message) {
+        missedMessages.computeIfAbsent(recipient, k -> new ArrayList<>()).add(message);
     }
 
     // Save missed messages for a user (this method should be called when the user is offline)

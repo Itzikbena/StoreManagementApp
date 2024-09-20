@@ -220,9 +220,11 @@
     });
   }
 
+
   // Connect to WebSocket and subscribe to channels
   function connectToChat() {
     const socket = new SockJS('/chat-websocket');
+    let isSubscribed = false;
     stompClient = Stomp.over(socket);
 
     stompClient.connect({}, function (frame) {
@@ -232,14 +234,19 @@
               .then(data => {
                 username = data.username;
 
+                if (!isSubscribed) {
+                  stompClient.subscribe('/topic/private-messages', function (message) {
+                    const receivedMessage = JSON.parse(message.body);
+                    if (receivedMessage.recipient === username) {
+                      showPrivateMessage(receivedMessage);
+                    }
+                  });
+                  isSubscribed = true; // Set to true to prevent duplicate subscriptions
+                }
+
                 // Subscribe to public messages
                 stompClient.subscribe('/topic/messages', function (message) {
                   showMessage(JSON.parse(message.body));
-                });
-
-                // Subscribe to private messages sent to this user
-                stompClient.subscribe(`/user/${username}/queue/messages`, function (message) {
-                  showPrivateMessage(JSON.parse(message.body));
                 });
 
                 // Subscribe to active users and update the list

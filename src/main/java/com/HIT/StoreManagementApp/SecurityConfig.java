@@ -23,6 +23,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.security.web.session.HttpSessionEventPublisher;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -36,6 +37,7 @@ public class SecurityConfig {
     public SecurityConfig(CustomUserDetailsService customUserDetailsService) {
         this.customUserDetailsService = customUserDetailsService; // Injecting CustomUserDetailsService
     }
+
 
     @Bean
     public SessionRegistry sessionRegistry() {
@@ -79,6 +81,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
                         .requestMatchers("/alreadyOnline").permitAll()
+                        .requestMatchers("/chat-websocket/**").permitAll()
                         .requestMatchers("/admin/users/isoffline").permitAll() // Allow everyone to access isoffline
                         .requestMatchers("/admin/users/isonline").permitAll()
                         .requestMatchers("/admin/users/list").permitAll() // Allow everyone to access isonline
