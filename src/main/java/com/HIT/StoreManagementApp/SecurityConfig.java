@@ -84,6 +84,7 @@ public class SecurityConfig {
                         .requestMatchers("/chat-websocket/**").permitAll()
                         .requestMatchers("/admin/users/isoffline").permitAll() // Allow everyone to access isoffline
                         .requestMatchers("/admin/users/isonline").permitAll()
+                        .requestMatchers("/admin/users/**").permitAll()
                         .requestMatchers("/api/customers").permitAll()
                         .requestMatchers("/admin/sales/**").permitAll()
                         .requestMatchers("/admin/customers/**").permitAll()

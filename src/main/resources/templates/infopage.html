@@ -4,28 +4,115 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>מלאי בסניף</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
   <style>
-    table {
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      padding: 15px;
+      background-color: #007bff;
+      color: white;
       width: 100%;
-      border-collapse: collapse;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      position: relative;
+    }
+    .header button {
+      cursor: pointer;
+      border: none;
+      padding: 10px 15px;
+      background-color: #dc3545;
+      color: white;
+      font-size: 14px;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
+    }
+    .header button:hover {
+      background-color: #c82333;
+    }
+    .user-icon {
+      font-size: 24px;
+      cursor: pointer;
+      margin-right: 20px;
+      color: white;
+    }
+    .user-details {
+      display: none;
+      position: absolute;
+      top: 50px;
+      right: 20px;
+      background-color: white;
+      color: #333;
+      padding: 15px;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 2000;
+      text-align: right;
+      min-width: 200px;
+    }
+    .user-details p {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .branch-info {
+      text-align: center;
+      font-size: 24px;
+      color: #333;
       margin: 20px 0;
+      font-weight: bold;
+    }
+    table {
+      width: 90%;
+      max-width: 1000px;
+      margin: 20px 0;
+      border-collapse: collapse;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      background-color: white;
     }
     th, td {
-      padding: 10px;
+      padding: 15px;
       border: 1px solid #ddd;
-      text-align: left;
+      text-align: center;
     }
     th {
       background-color: #f2f2f2;
+      font-weight: bold;
     }
-    #productInfo {
-      margin-top: 20px;
+    button {
+      cursor: pointer;
+      border: none;
+      padding: 10px 15px;
+      background-color: #007bff;
+      color: white;
+      font-size: 14px;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
     }
-    #cartTable, #customerList {
-      margin-top: 40px;
+    button:hover {
+      background-color: #0056b3;
     }
-
-    /* Modal styles */
+    #cartTable, #customerList, #priceSummary, #purchaseButton {
+      width: 90%;
+      max-width: 800px;
+      margin: 20px 0;
+      text-align: center;
+    }
+    #priceSummary p {
+      font-size: 18px;
+      margin: 5px 0;
+    }
     #newCustomerModal {
       display: none;
       position: fixed;
@@ -36,9 +123,29 @@
       background-color: white;
       padding: 20px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      width: 400px;
+      border-radius: 5px;
     }
     #newCustomerModal h3 {
       margin-top: 0;
+      background-color: #007bff;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      text-align: center;
+    }
+    #newCustomerModal label {
+      display: block;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    #newCustomerModal input, #newCustomerModal select {
+      width: calc(100% - 20px);
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
     }
     .modal-overlay {
       display: none;
@@ -50,38 +157,71 @@
       background: rgba(0, 0, 0, 0.5);
       z-index: 999;
     }
-
-    #priceSummary {
-      margin-top: 20px;
+    .modal-overlay.active, #newCustomerModal.active {
+      display: block;
     }
-
-    /* Chat button styles */
     #openChatButton {
       position: fixed;
-      bottom: 10px;
-      right: 10px;
-      z-index: 2000;
+      bottom: 20px;
+      right: 20px;
+      z-index: 3000;
       background-color: #007bff;
       color: white;
       border: none;
-      padding: 10px 20px;
+      padding: 15px 25px;
       cursor: pointer;
-      border-radius: 5px;
+      border-radius: 50px;
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: background-color 0.3s ease;
+      font-size: 16px;
+    }
+    #openChatButton:hover {
+      background-color: #0056b3;
+    }
+    #purchaseButton {
+      background-color: #28a745; /* ירוק בהיר */
+    }
+    #purchaseButton:hover {
+      background-color: #218838;
+    }
+    .cart-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+    .cart-buttons button {
+      background-color: #f44336;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+    }
+    .cart-buttons button:hover {
+      background-color: #c0392b;
+    }
+    #customerTypeDisplay {
+      font-size: 16px;
+      font-weight: bold;
+      color: #007bff;
+      text-align: center;
+      margin: 10px 0;
     }
   </style>
 </head>
 <body>
 
-<div class="container">
+<div class="header">
+  <i class="fas fa-user user-icon" id="userIcon"></i>
   <button onclick="logout()">התנתקות</button>
+
+  <!-- תיבת פרטי המשתמש -->
+  <div class="user-details" id="userDetails">
+    <p>שם משתמש: <span id="userName">User Name</span></p>
+    <p>סניף: <span id="userBranch">Branch Name</span></p>
+    <p>תפקיד: <span id="userRole">Role</span></p>
+  </div>
 </div>
 
-<!-- Chat Button -->
-<button id="openChatButton">פתח צ'אט</button>
-
-<h2>מלאי בסניף</h2>
-<p id="branchName"></p>
+<div class="branch-info" id="branchName"></div>
 
 <table id="inventoryTable">
   <thead>
@@ -107,6 +247,7 @@
     <th>שם המוצר</th>
     <th>כמות</th>
     <th>מחיר</th>
+    <th>הסר מהסל</th>
   </tr>
   </thead>
   <tbody>
@@ -118,6 +259,7 @@
   <option value="">בחר לקוח</option>
 </select>
 <button id="addNewCustomer">הוסף לקוח חדש</button>
+<div id="customerTypeDisplay"></div>
 
 <div id="priceSummary">
   <p>סה"כ לפני הנחה: ₪<span id="totalPrice">0.00</span></p>
@@ -131,35 +273,64 @@
 <div id="newCustomerModal">
   <h3>הוסף לקוח חדש</h3>
   <label>שם:</label>
-  <input type="text" id="newCustomerName" placeholder="הכנס שם"><br>
+  <input type="text" id="newCustomerName" placeholder="הכנס שם">
   <label>דואר אלקטרוני:</label>
-  <input type="email" id="newCustomerEmail" placeholder="הכנס דואר אלקטרוני"><br>
+  <input type="email" id="newCustomerEmail" placeholder="הכנס דואר אלקטרוני">
   <label>מספר דרכון:</label>
-  <input type="text" id="newCustomerPassport" placeholder="הכנס מספר דרכון"><br>
+  <input type="text" id="newCustomerPassport" placeholder="הכנס מספר דרכון">
   <label>מספר טלפון:</label>
-  <input type="text" id="newCustomerPhone" placeholder="הכנס מספר טלפון"><br>
+  <input type="text" id="newCustomerPhone" placeholder="הכנס מספר טלפון">
   <label>סוג לקוח:</label>
   <select id="customerType">
     <option value="NewCustomer">חדש</option>
     <option value="CircularCustomer">מעגלי</option>
     <option value="VipCustomer">VIP</option>
   </select>
-  <br>
   <button id="saveCustomer">שמור</button>
   <button id="closeModal">סגור</button>
 </div>
 <div class="modal-overlay"></div>
 
+<!-- כפתור צ'אט -->
+<button id="openChatButton">פתח צ'אט</button>
+
 <script>
   let cart = [];
-
-  // Store userId globally
-  let userId = getQueryParam('userId');
+  let userId = getQueryParam('userId'); // Store userId globally
 
   // Function to get query parameters from the URL
   function getQueryParam(param) {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get(param);
+  }
+
+  // Function to toggle user details visibility
+  document.getElementById('userIcon').addEventListener('click', () => {
+    const userDetails = document.getElementById('userDetails');
+    if (userDetails.style.display === 'block') {
+      userDetails.style.display = 'none';
+    } else {
+      // Fetch user details from server before showing the modal
+      fetchUserDetails(userId);
+    }
+  });
+
+  // Function to fetch user details from the server
+  function fetchUserDetails(userId) {
+    fetch(`http://localhost:8080/admin/users/currentChatUser?userId=${userId}`)
+            .then(response => response.json())
+            .then(data => {
+              if (data) {
+                // Update the user details modal with fetched data
+                document.getElementById('userName').textContent = data.username;
+                document.getElementById('userBranch').textContent = data.branch ? data.branch.name : 'לא משויך לסניף';
+                document.getElementById('userRole').textContent = data.role;
+                document.getElementById('userDetails').style.display = 'block';
+              } else {
+                alert('משתמש לא נמצא.');
+              }
+            })
+            .catch(error => console.error('Error fetching user details:', error));
   }
 
   // Function to logout the user
@@ -274,16 +445,39 @@
     };
 
     cart.push(cartItem);
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td>${productName}</td>
-      <td>1</td>
-      <td>₪${productPrice.toFixed(2)}</td>
-    `;
-    cartTableBody.appendChild(row);
+    updateCartTable();
 
     // Update the total price
     updatePriceSummary();
+  }
+
+  // Function to update cart table with buttons
+  function updateCartTable() {
+    const cartTableBody = document.querySelector('#cartTable tbody');
+    cartTableBody.innerHTML = ''; // Clear the table before re-rendering
+    cart.forEach(item => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+      <td>${item.name}</td>
+      <td>${item.quantity}</td>
+      <td>₪${(item.price * item.quantity).toFixed(2)}</td>
+      <td class="cart-buttons">
+        <button onclick="removeFromCart(${item.id})">הסר מהסל</button>
+      </td>
+    `;
+      cartTableBody.appendChild(row);
+    });
+  }
+
+
+  // Function to remove product from cart
+  function removeFromCart(productId) {
+    const index = cart.findIndex(item => item.id === productId);
+    if (index !== -1) {
+      cart.splice(index, 1); // Remove the product completely from the cart
+    }
+    updateCartTable(); // Update the cart table to reflect changes
+    updatePriceSummary(); // Update price summary to reflect changes
   }
 
   // Function to calculate the total price and discount
@@ -294,19 +488,31 @@
     const selectedCustomer = document.getElementById('customerList').value;
 
     if (!selectedCustomer) {
+      console.log("No customer selected");
       return; // No customer selected, skip the price calculation
     }
 
     // Fetch customer details to get their type
     fetch(`http://localhost:8080/admin/customers/${selectedCustomer}`)
-            .then(response => response.json())
+            .then(response => {
+              console.log("Fetch customer response:", response);
+              if (!response.ok) {
+                throw new Error(`Customer fetch failed: ${response.status}`);
+              }
+              return response.json();
+            })
             .then(customer => {
+              console.log("Customer data:", customer); // Debugging line
               let discount = 0;
+
+              // Display customer type
+              const customerTypeDisplay = document.getElementById('customerTypeDisplay');
+              customerTypeDisplay.textContent = `סוג הלקוח: ${customer.type}`;
 
               // Determine discount based on customer type
               if (customer.type === 'circular') {
                 discount = 0.05; // 5% discount
-              } else if (customer.type === 'Vip') {
+              } else if (customer.type === 'vip') {
                 discount = 0.15; // 15% discount
               }
 
@@ -325,14 +531,14 @@
 
   // Show modal to add new customer
   document.getElementById('addNewCustomer').addEventListener('click', () => {
-    document.querySelector('.modal-overlay').style.display = 'block';
-    document.getElementById('newCustomerModal').style.display = 'block';
+    document.querySelector('.modal-overlay').classList.add('active');
+    document.getElementById('newCustomerModal').classList.add('active');
   });
 
   // Close modal
   document.getElementById('closeModal').addEventListener('click', () => {
-    document.querySelector('.modal-overlay').style.display = 'none';
-    document.getElementById('newCustomerModal').style.display = 'none';
+    document.querySelector('.modal-overlay').classList.remove('active');
+    document.getElementById('newCustomerModal').classList.remove('active');
   });
 
   // Save new customer
@@ -363,8 +569,9 @@
               option.value = customer.id;
               option.textContent = customer.name;
               customerList.appendChild(option);
-              document.querySelector('.modal-overlay').style.display = 'none'; // Hide modal
-              document.getElementById('newCustomerModal').style.display = 'none';
+              document.querySelector('.modal-overlay').classList.remove('active'); // Hide modal
+              document.getElementById('newCustomerModal').classList.remove('active');
+              updatePriceSummary(); // Update price summary when a new customer is added
             })
             .catch(error => console.error('Error adding customer:', error));
   });
