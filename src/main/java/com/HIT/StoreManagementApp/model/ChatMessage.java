@@ -58,7 +58,3 @@ public class ChatMessage {
         this.recipient = recipient;
     }
 }
-
-
-
-

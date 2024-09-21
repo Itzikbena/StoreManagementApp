@@ -3,13 +3,33 @@ package com.HIT.StoreManagementApp.controller;
 import com.HIT.StoreManagementApp.model.*;
 import com.HIT.StoreManagementApp.repository.SaleRepository;
 import com.HIT.StoreManagementApp.service.*;
+import org.springframework.core.io.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import com.HIT.StoreManagementApp.model.Sale;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+
+
+
 
 @RestController
 @RequestMapping("/admin/sales")
@@ -32,6 +52,98 @@ public class SaleController {
 
     @Autowired
     private SaleRepository saleRepository;
+
+    @GetMapping("/report/download")
+    public ResponseEntity<Resource> downloadReport(@RequestParam String type,
+                                                   @RequestParam(required = false) Long branchId,
+                                                   @RequestParam(required = false) String product,
+                                                   @RequestParam(required = false) String category) throws IOException {
+        List<Sale> reportData = new ArrayList<>();
+
+        switch (type) {
+            case "branchSales":
+                if (branchId != null) {
+                    reportData = saleRepository.findByBranchId(branchId);
+                }
+                break;
+
+            case "productSales":
+                if (product != null) {
+                    reportData = saleRepository.findByProduct_Name(product);
+                }
+                break;
+
+            case "categorySales":
+                if (category != null) {
+                    reportData = saleRepository.findByProduct_Category(category);
+                }
+                break;
+
+            default:
+                return ResponseEntity.badRequest().body(null);
+        }
+
+        // Convert data to CSV with BOM
+        StringBuilder csvBuilder = new StringBuilder("\uFEFF"); // Adding BOM for UTF-8 support
+        csvBuilder.append("Product Name,Quantity,Price,Sale Date\n");
+        for (Sale sale : reportData) {
+            csvBuilder.append(sale.getProduct().getName()).append(",");
+            csvBuilder.append(sale.getQuantity()).append(",");
+            csvBuilder.append(sale.getPrice()).append(",");
+            csvBuilder.append(sale.getSaleTime()).append("\n");
+        }
+
+        // Save CSV to file
+        String fileName = "report.csv";
+        Path filePath = Paths.get(System.getProperty("java.io.tmpdir"), fileName);
+        Files.write(filePath, csvBuilder.toString().getBytes(StandardCharsets.UTF_8));
+
+        // Prepare the resource for download
+        org.springframework.core.io.Resource resource = new FileSystemResource(filePath.toFile());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment;filename=" + fileName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .contentLength(filePath.toFile().length())
+                .body(resource);
+    }
+
+
+
+    @GetMapping("/report")
+    public ResponseEntity<?> generateReport(@RequestParam String type,
+                                            @RequestParam(required = false) Long branchId,
+                                            @RequestParam(required = false) String product,
+                                            @RequestParam(required = false) String category) {
+        List<Sale> reportData = new ArrayList<>();
+
+        switch (type) {
+            case "branchSales":
+                if (branchId != null) {
+                    reportData = saleRepository.findByBranchId(branchId);
+                }
+                break;
+
+            case "productSales":
+                if (product != null) {
+                    reportData = saleRepository.findByProduct_Name(product);
+                }
+                break;
+
+            case "categorySales":
+                if (category != null) {
+                    reportData = saleRepository.findByProduct_Category(category);
+                }
+                break;
+
+            default:
+                return ResponseEntity.badRequest().body("Invalid report type");
+        }
+
+        return ResponseEntity.ok(reportData);
+    }
+
+
 
     @PostMapping("/sell")
     public ResponseEntity<Map<String, Object>> sellProduct(@RequestParam Long employeeId, @RequestParam Long productId,

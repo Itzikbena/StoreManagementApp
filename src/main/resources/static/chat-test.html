@@ -5,34 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat Test</title>
   <style>
-    #chatIcon {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      width: 50px;
-      height: 50px;
-      background-color: #007bff;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-size: 24px;
-      cursor: pointer;
-    }
+    /* Removed #chatIcon styles */
 
     #chatWindow {
       position: fixed;
-      bottom: 80px;
+      bottom: 20px;
       right: 20px;
       width: 90%; /* Adjust width to fit better on different screen sizes */
       max-width: 400px; /* Maximum width to avoid being too large */
       background-color: rgba(255, 255, 255, 0.9);
       border: 1px solid #ccc;
-      display: none;
       z-index: 999;
-      max-height: 70%; /* Constrain the height so it won't exceed the browser height */
+      max-height: 200%; /* Constrain the height so it won't exceed the browser height */
       overflow-y: auto; /* Allow scrolling if the content exceeds the window height */
+      display: block; /* Make it visible by default */
     }
 
     #onlineUsers {
@@ -141,9 +127,6 @@
 </head>
 <body>
 
-<!-- Chat Icon (Facebook-like) -->
-<div id="chatIcon" onclick="toggleChatWindow()">💬</div>
-
 <!-- Main chat window -->
 <div id="chatWindow">
   <h3>Users</h3>
@@ -170,11 +153,7 @@
   let allUsers = []; // List of all users
   let onlineUsers = []; // List of currently online users
 
-  // Toggle chat window visibility
-  function toggleChatWindow() {
-    const chatWindow = document.getElementById('chatWindow');
-    chatWindow.style.display = chatWindow.style.display === 'none' ? 'block' : 'none';
-  }
+  // Remove toggleChatWindow function
 
   // Connect to WebSocket as soon as the page loads
   window.onload = function () {
@@ -219,7 +198,6 @@
       onlineUsersDiv.appendChild(userElement);
     });
   }
-
 
   // Connect to WebSocket and subscribe to channels
   function connectToChat() {

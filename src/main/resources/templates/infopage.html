@@ -55,27 +55,30 @@
       margin-top: 20px;
     }
 
-    /* Chat iframe (transparent) */
-    #chatIframe {
+    /* Chat button styles */
+    #openChatButton {
       position: fixed;
-      bottom: 0;
-      right: 0;
-      width: 400px;
-      height: 700px;
-      border: none;
+      bottom: 10px;
+      right: 10px;
       z-index: 2000;
-      background-color: transparent;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      cursor: pointer;
+      border-radius: 5px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-
   </style>
 </head>
 <body>
 
 <div class="container">
-  <button onclick="logout()">Logout</button>
+  <button onclick="logout()">התנתקות</button>
 </div>
 
-<iframe id="chatIframe" src="http://localhost:8080/chat-test.html" style="width: 1200px; height: 800px; border: none;" allowtransparency="true"></iframe>
+<!-- Chat Button -->
+<button id="openChatButton">פתח צ'אט</button>
 
 <h2>מלאי בסניף</h2>
 <p id="branchName"></p>
@@ -83,7 +86,7 @@
 <table id="inventoryTable">
   <thead>
   <tr>
-    <th>Index</th>
+    <th>#</th>
     <th>מין</th>
     <th>שם המוצר</th>
     <th>קטגוריה</th>
@@ -135,6 +138,13 @@
   <input type="text" id="newCustomerPassport" placeholder="הכנס מספר דרכון"><br>
   <label>מספר טלפון:</label>
   <input type="text" id="newCustomerPhone" placeholder="הכנס מספר טלפון"><br>
+  <label>סוג לקוח:</label>
+  <select id="customerType">
+    <option value="NewCustomer">חדש</option>
+    <option value="CircularCustomer">מעגלי</option>
+    <option value="VipCustomer">VIP</option>
+  </select>
+  <br>
   <button id="saveCustomer">שמור</button>
   <button id="closeModal">סגור</button>
 </div>
@@ -223,15 +233,15 @@
                 data.forEach((product, index) => {
                   const row = document.createElement('tr');
                   row.innerHTML = `
-              <td>${index + 1}</td>
-              <td>${product.type}</td>
-              <td>${product.name}</td>
-              <td>${product.category}</td>
-              <td>${product.size}</td>
-              <td>${product.quantity}</td>
-              <td>₪${product.price.toFixed(2)}</td>
-              <td><button onclick="addToCart(${index + 1}, '${product.name}', ${product.price})">+</button></td>
-            `;
+            <td>${index + 1}</td>
+            <td>${product.type}</td>
+            <td>${product.name}</td>
+            <td>${product.category}</td>
+            <td>${product.size}</td>
+            <td>${product.quantity}</td>
+            <td>₪${product.price.toFixed(2)}</td>
+            <td><button onclick="addToCart(${index + 1}, '${product.name}', ${product.price})">+</button></td>
+          `;
                   tableBody.appendChild(row);
                 });
               })
@@ -294,9 +304,9 @@
               let discount = 0;
 
               // Determine discount based on customer type
-              if (customer.type === 'Circular') {
+              if (customer.type === 'circular') {
                 discount = 0.05; // 5% discount
-              } else if (customer.type === 'VIP') {
+              } else if (customer.type === 'Vip') {
                 discount = 0.15; // 15% discount
               }
 
@@ -331,7 +341,7 @@
     const email = document.getElementById('newCustomerEmail').value;
     const passport = document.getElementById('newCustomerPassport').value;
     const phone = document.getElementById('newCustomerPhone').value;
-    const type = "New"; // Default type
+    const type = document.getElementById('customerType').value; // Get customer type from dropdown
 
     fetch('http://localhost:8080/admin/customers', {
       method: 'POST',
@@ -364,55 +374,49 @@
     const selectedCustomer = document.getElementById('customerList').value;
 
     if (!selectedCustomer) {
-      alert('Please select a customer before making a purchase.');
+      alert('אנא בחר לקוח לפני ביצוע רכישה.');
       return;
     }
 
-    // Fetch customer details to get their type
-    fetch(`http://localhost:8080/admin/customers/${selectedCustomer}`)
-            .then(response => response.json())
-            .then(customer => {
-              let discount = 0;
+    // Validate the cart is not empty
+    if (cart.length === 0) {
+      alert('סל הקניות ריק. אנא הוסף מוצרים לפני ביצוע רכישה.');
+      return;
+    }
 
-              // Determine discount based on customer type
-              if (customer.type === 'Circular') {
-                discount = 0.05; // 5% discount
-              } else if (customer.type === 'VIP') {
-                discount = 0.15; // 15% discount
-              }
-
-              // Process each item in the cart
-              const makePurchase = (cart, index) => {
-                if (index >= cart.length) {
-                  alert('רכישה בוצעה בהצלחה');
-                  return;
+    // Function to process each item in the cart
+    cart.forEach(item => {
+      // Send a separate request for each item in the cart
+      fetch(`http://localhost:8080/admin/sales/sell?employeeId=${userId}&productId=${item.id}&branchId=${branchId}&quantity=${item.quantity}&customerId=${selectedCustomer}`, {
+        method: 'POST'
+      })
+              .then(response => {
+                if (!response.ok) {
+                  throw new Error(`Error: ${response.status} ${response.statusText}`);
                 }
+                return response.json();
+              })
+              .then(result => {
+                console.log(`Purchase successful for product: ${item.name}`);
+              })
+              .catch(error => {
+                console.error('Purchase failed:', error);
+                alert('שגיאה במהלך הרכישה: ' + error.message);
+              });
+    });
 
-                const item = cart[index];
-                const discountedPrice = item.price * (1 - discount); // Apply discount
-
-                fetch(`http://localhost:8080/admin/sales/sell?employeeId=${userId}&productId=${item.id}&branchId=${branchId}&quantity=${item.quantity}&customerId=${selectedCustomer}`, {
-                  method: 'POST'
-                })
-                        .then(response => {
-                          if (response.ok) {
-                            console.log(`Purchase successful for product: ${item.name}`);
-                          } else {
-                            console.error('Error during purchase:', response);
-                            alert('שגיאה במהלך הרכישה');
-                          }
-                          makePurchase(cart, index + 1); // Proceed to next item
-                        })
-                        .catch(error => {
-                          console.error('Purchase failed:', error);
-                          alert('שגיאה במהלך הרכישה');
-                        });
-              };
-
-              // Start processing the first item in the cart
-              makePurchase(cart, 0);
-            });
+    // Clear the cart and update the UI after processing all items
+    cart = [];
+    document.querySelector('#cartTable tbody').innerHTML = '';
+    updatePriceSummary();
+    alert('רכישה בוצעה בהצלחה!');
   });
+
+  // Handle chat button click
+  document.getElementById('openChatButton').addEventListener('click', function () {
+    window.open('http://localhost:8080/chat-test.html', '_blank', 'width=400,height=700');
+  });
+
 </script>
 
 </body>

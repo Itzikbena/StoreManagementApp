@@ -84,6 +84,9 @@ public class SecurityConfig {
                         .requestMatchers("/chat-websocket/**").permitAll()
                         .requestMatchers("/admin/users/isoffline").permitAll() // Allow everyone to access isoffline
                         .requestMatchers("/admin/users/isonline").permitAll()
+                        .requestMatchers("/api/customers").permitAll()
+                        .requestMatchers("/admin/sales/**").permitAll()
+                        .requestMatchers("/admin/customers/**").permitAll()
                         .requestMatchers("/admin/users/list").permitAll() // Allow everyone to access isonline
                         .requestMatchers("/login").permitAll()  // Allow access to the login page and custom POST login
                         .requestMatchers("/infopage").authenticated()  // Protect the infopage
