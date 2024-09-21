@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat Test</title>
   <style>
-    /* Removed #chatIcon styles */
-
     #chatWindow {
       position: fixed;
       bottom: 20px;
@@ -152,14 +150,14 @@
   let messageHistory = {}; // Object to store message history for each user
   let allUsers = []; // List of all users
   let onlineUsers = []; // List of currently online users
-
-  // Remove toggleChatWindow function
+  let pendingMessages = {};
 
   // Connect to WebSocket as soon as the page loads
   window.onload = function () {
     fetchUsers(); // Fetch list of users
     connectToChat();
     loadAllMessageHistory(); // Load message history from localStorage on page load
+    loadPendingMessages(); // Load pending messages from localStorage on page load
   };
 
   // Fetch the list of all users
@@ -231,6 +229,9 @@
                 stompClient.subscribe('/topic/activeUsers', function (message) {
                   onlineUsers = JSON.parse(message.body);
                   updateOnlineStatus();
+
+                  // שלח הודעות בהמתנה למשתמשים שכרגע התחברו
+                  sendPendingMessagesToConnectedUsers();
                 });
 
                 // Fetch missed messages on reconnect
@@ -241,6 +242,20 @@
               });
     });
   }
+
+  function sendPendingMessagesToConnectedUsers() {
+    onlineUsers.forEach(user => {
+      if (pendingMessages[user] && pendingMessages[user].length > 0) {
+        pendingMessages[user].forEach(message => {
+          stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify(message));
+        });
+        // לאחר שליחת ההודעות, ננקה את רשימת ההודעות הממתינות לאותו משתמש
+        delete pendingMessages[user];
+        savePendingMessages(); // שמירה ב-localStorage
+      }
+    });
+  }
+
 
   // Fetch missed messages from the server
   function fetchMissedMessages() {
@@ -305,8 +320,8 @@
     const privateChatWindow = document.createElement('div');
     privateChatWindow.id = 'privateChat_' + recipient;
     privateChatWindow.classList.add('privateChatWindow');
-    privateChatWindow.innerHTML = `
-      <div class="privateChatHeader">
+    privateChatWindow.innerHTML =
+            `<div class="privateChatHeader">
         Chat with ${recipient}
         <span class="privateChatClose" onclick="closePrivateChat('${recipient}')">&times;</span>
       </div>
@@ -314,8 +329,7 @@
       <div class="privateChatInput">
         <input type="text" placeholder="Type a message" id="privateMessageInput_${recipient}">
         <button onclick="sendPrivateMessage('${recipient}')">Send</button>
-      </div>
-    `;
+      </div>`;
 
     // Positioning logic
     const positionIndex = openChatWindows.length; // Get the number of open chat windows
@@ -340,7 +354,20 @@
         'message': messageContent,
         'recipient': recipient
       };
-      stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify(message));
+
+      if (onlineUsers.includes(recipient)) {
+        // המשתמש מחובר, שלח את ההודעה מיד
+        stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify(message));
+      } else {
+        // המשתמש לא מחובר, שמור את ההודעה כ-"בהמתנה"
+        if (!pendingMessages[recipient]) {
+          pendingMessages[recipient] = [];
+        }
+        pendingMessages[recipient].push(message);
+        savePendingMessages(); // שמור את ההודעות בהמתנה ב-localStorage או בשרת
+        console.log("Message saved to pending for user:", recipient);
+      }
+
       input.value = ''; // Clear input
 
       // Add message to chat window and save in history
@@ -358,7 +385,18 @@
     }
   }
 
-  // Close private chat window
+  function savePendingMessages() {
+    localStorage.setItem('pendingMessages', JSON.stringify(pendingMessages));
+  }
+
+  function loadPendingMessages() {
+    const storedPendingMessages = localStorage.getItem('pendingMessages');
+    if (storedPendingMessages) {
+      pendingMessages = JSON.parse(storedPendingMessages);
+    }
+  }
+
+
   function closePrivateChat(recipient) {
     const privateChatWindow = document.getElementById('privateChat_' + recipient);
     if (privateChatWindow) {

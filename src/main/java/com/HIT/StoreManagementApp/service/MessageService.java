@@ -1,5 +1,8 @@
 package com.HIT.StoreManagementApp.service;
 
+import com.HIT.StoreManagementApp.model.MessageEntity;
+import com.HIT.StoreManagementApp.repository.MessageRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.Message;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +16,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MessageService {
 
     // This map simulates the storage of missed messages
+
+    @Autowired
+    private MessageRepository messageRepository;
     private Map<String, List<String>> missedMessagesStore = new ConcurrentHashMap<>();
 
     private Map<String, List<Message>> missedMessages = new HashMap<>();
@@ -24,6 +30,14 @@ public class MessageService {
         // Clear messages after retrieving them
         missedMessages.remove(username);
         return messages;
+    }
+
+    public MessageEntity saveMessage(MessageEntity message) {
+        return messageRepository.save(message);
+    }
+
+    public List<MessageEntity> getMessagesBetweenUsers(String senderId, String receiverId) {
+        return messageRepository.findBySenderIdOrReceiverId(senderId, receiverId);
     }
     public void addMissedMessage(String recipient, Message message) {
         missedMessages.computeIfAbsent(recipient, k -> new ArrayList<>()).add(message);

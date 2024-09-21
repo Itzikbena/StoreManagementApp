@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
-    List<MessageEntity> findByReceiverIdAndReceivedFalse(String receiverId);
+    List<MessageEntity> findBySenderIdOrReceiverId(String senderId, String receiverId);
 
 
 }

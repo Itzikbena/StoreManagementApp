@@ -1,11 +1,14 @@
 package com.HIT.StoreManagementApp.controller;
 
 import com.HIT.StoreManagementApp.model.ChatMessage;
+import com.HIT.StoreManagementApp.model.MessageEntity;
 import com.HIT.StoreManagementApp.service.MessageService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
@@ -28,7 +31,8 @@ public class ChatController {
 
     private final List<ChatMessage> messageLog = new ArrayList<>();
 
-    private MessageService messageService; // A service to handle message logic
+    @Autowired
+    private MessageService messageService;
 
 
 
@@ -93,9 +97,20 @@ public class ChatController {
     // Handle private message
     @MessageMapping("/sendPrivateMessage")
     @SendTo("/topic/private-messages")
-    public ChatMessage sendPrivateMessage(ChatMessage message) {
-        System.out.println("Broadcasting private message: " + message);
-        return message;  // Broadcast private message to a topic
+    public ChatMessage sendPrivateMessage(@Payload ChatMessage chatMessage) {
+        // Create a MessageEntity object and save it to the database
+        MessageEntity messageEntity = new MessageEntity(
+                chatMessage.getUsername(),
+                chatMessage.getRecipient(),
+                chatMessage.getMessage()
+        );
+        messageEntity.setReceived(true);
+        messageService.saveMessage(messageEntity);
+
+        System.out.println("Broadcasting private message: " + chatMessage);
+
+        // Return the ChatMessage to broadcast it to the topic
+        return chatMessage;
     }
 
     // Get the authenticated username
