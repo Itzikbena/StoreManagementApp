@@ -49,7 +49,7 @@
     }
 
     /* Admin form modal */
-    #adminFormModal, #branchFormModal, #inventoryFormModal, #reportFormModal, #reportViewModal {
+    #adminFormModal, #branchFormModal, #inventoryFormModal, #reportFormModal, #reportViewModal, #logFormModal, #logViewModal {
       display: none; /* Hidden by default */
       position: fixed;
       top: 50%;
@@ -62,6 +62,8 @@
       border-radius: 8px;
       width: 400px;
       text-align: center; /* Center align modal content */
+      overflow-y: auto; /* Enable scrolling for long content */
+      max-height: 80vh; /* Set maximum height */
     }
 
     /* Modal overlay */
@@ -77,7 +79,7 @@
     }
 
     /* Modal close button */
-    #closeModalBtn, #closeBranchModalBtn, #closeInventoryModalBtn, #closeReportModalBtn, #closeReportViewModalBtn {
+    #closeModalBtn, #closeBranchModalBtn, #closeInventoryModalBtn, #closeReportModalBtn, #closeReportViewModalBtn, #closeLogModalBtn, #closeLogViewModalBtn {
       background-color: red;
       color: white;
       border: none;
@@ -92,21 +94,28 @@
       color: #007bff; /* Soft blue text */
     }
 
-    /* Report display table */
-    #reportTable {
+    /* Log display table */
+    #logTable, #reportTable {
       margin-top: 20px;
       width: 100%;
       border-collapse: collapse;
     }
 
-    #reportTable th, #reportTable td {
+    #logTable th, #logTable td, #reportTable th, #reportTable td {
       border: 1px solid #ddd;
       padding: 8px;
     }
 
-    #reportTable th {
+    #logTable th, #reportTable th {
       background-color: #007bff;
       color: white;
+    }
+
+    /* Scrollable table */
+    .scrollable-table {
+      max-height: 300px; /* Set maximum height for scrollable table */
+      overflow-y: auto; /* Enable vertical scrolling */
+      width: 100%; /* Full width */
     }
 
   </style>
@@ -119,6 +128,7 @@
   <button id="openBranchModalBtn">הוספת סניף חדש</button>
   <button id="openInventoryModalBtn">מלאי חדש</button>
   <button id="openReportModalBtn">ממשק לניהול דוחות</button> <!-- Report button -->
+  <button id="openLogModalBtn">ניהול לוגים</button> <!-- New Log Management button -->
 </div>
 
 <!-- Modal to add new employee -->
@@ -235,24 +245,64 @@
   <button id="closeReportModalBtn">סגור</button>
 </div>
 
-<!-- New Modal to view report -->
+<!-- Modal to view report -->
 <div id="reportViewModal">
   <h2>דוח מכירות</h2>
-  <table id="reportTable">
-    <thead>
-    <tr>
-      <th>שם מוצר</th>
-      <th>כמות</th>
-      <th>מחיר</th>
-      <th>תאריך מכירה</th>
-    </tr>
-    </thead>
-    <tbody>
-    <!-- Report data will be populated here -->
-    </tbody>
-  </table>
+  <div class="scrollable-table">
+    <table id="reportTable">
+      <thead>
+      <tr>
+        <th>שם מוצר</th>
+        <th>כמות</th>
+        <th>מחיר</th>
+        <th>תאריך מכירה</th>
+      </tr>
+      </thead>
+      <tbody>
+      <!-- Report data will be populated here -->
+      </tbody>
+    </table>
+  </div>
   <button id="downloadReportBtn" style="display: none;">הורד דוח</button>
   <button id="closeReportViewModalBtn">סגור</button>
+</div>
+
+<!-- Modal to manage logs -->
+<div id="logFormModal">
+  <h2>ניהול לוגים</h2>
+
+  <label for="logTypeSelect">סוג הלוג</label>
+  <select id="logTypeSelect">
+    <option value="">בחר סוג לוג</option>
+    <option value="1">רישום לקוחות</option>
+    <option value="2">רישום עובדים</option>
+    <option value="3">קניות/מכירות מוצרים</option>
+    <option value="4">פרטי שיחות</option>
+  </select>
+
+  <button id="submitLogBtn">הצג לוגים</button>
+  <button id="closeLogModalBtn">סגור</button>
+</div>
+
+<!-- Modal to view logs -->
+<div id="logViewModal">
+  <h2>לוגים</h2>
+  <div class="scrollable-table">
+    <table id="logTable">
+      <thead>
+      <tr>
+        <th>סוג פעולה</th>
+        <th>תיאור פעולה</th>
+        <th>תאריך פעולה</th>
+        <th>סניף</th>
+      </tr>
+      </thead>
+      <tbody>
+      <!-- Log data will be populated here -->
+      </tbody>
+    </table>
+  </div>
+  <button id="closeLogViewModalBtn">סגור</button>
 </div>
 
 <!-- Modal Overlay -->
@@ -440,6 +490,51 @@
     document.getElementById('modalOverlay').style.display = 'block';
   }
 
+  // Handle log form submission
+  document.getElementById('submitLogBtn').addEventListener('click', () => {
+    const logType = document.getElementById('logTypeSelect').value;
+
+    if (!logType) {
+      alert('אנא בחר סוג לוג');
+      return;
+    }
+
+    // Fetch logs based on log type
+    fetch(`http://localhost:8080/api/logs?type=${logType}`)
+            .then(response => response.json())
+            .then(data => {
+              displayLogs(data); // Display the logs in the new log view modal
+              document.getElementById('logViewModal').style.display = 'block'; // Show log view modal
+              document.getElementById('modalOverlay').style.display = 'block'; // Show overlay
+            })
+            .catch(error => console.error('Error fetching logs:', error));
+  });
+
+  // Display logs in table in the new log view modal
+  function displayLogs(data) {
+    const logTable = document.getElementById('logTable');
+    const logBody = logTable.querySelector('tbody');
+
+    // Clear any previous data
+    logBody.innerHTML = '';
+
+    // Populate table with new data
+    data.forEach(log => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${log.actionType}</td>
+        <td>${log.actionDescription}</td>
+        <td>${new Date(log.actionTime).toLocaleDateString()}</td>
+        <td>${log.branchId ? log.branchId : 'N/A'}</td>
+      `;
+      logBody.appendChild(tr);
+    });
+
+    // Show the new log view modal
+    document.getElementById('logViewModal').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'block';
+  }
+
   // Download report as CSV
   document.getElementById('downloadReportBtn').addEventListener('click', () => {
     const reportType = document.getElementById('reportTypeSelect').value;
@@ -487,6 +582,12 @@
     document.getElementById('modalOverlay').style.display = 'block'; // Show overlay
   });
 
+  // Open the log modal when the button is clicked
+  document.getElementById('openLogModalBtn').addEventListener('click', () => {
+    document.getElementById('logFormModal').style.display = 'block'; // Show log modal
+    document.getElementById('modalOverlay').style.display = 'block'; // Show overlay
+  });
+
   // Close the employee modal when the close button is clicked
   document.getElementById('closeModalBtn').addEventListener('click', () => {
     document.getElementById('adminFormModal').style.display = 'none'; // Hide modal
@@ -511,7 +612,19 @@
     document.getElementById('modalOverlay').style.display = 'none'; // Hide overlay
   });
 
-  // Close the new report view modal
+  // Close the log modal when the close button is clicked
+  document.getElementById('closeLogModalBtn').addEventListener('click', () => {
+    document.getElementById('logFormModal').style.display = 'none'; // Hide log modal
+    document.getElementById('modalOverlay').style.display = 'none'; // Hide overlay
+  });
+
+  // Close the log view modal when the close button is clicked
+  document.getElementById('closeLogViewModalBtn').addEventListener('click', () => {
+    document.getElementById('logViewModal').style.display = 'none'; // Hide log view modal
+    document.getElementById('modalOverlay').style.display = 'none'; // Hide overlay
+  });
+
+  // Close the report view modal when the close button is clicked
   document.getElementById('closeReportViewModalBtn').addEventListener('click', () => {
     document.getElementById('reportViewModal').style.display = 'none'; // Hide report view modal
     document.getElementById('modalOverlay').style.display = 'none'; // Hide overlay
@@ -523,6 +636,8 @@
     document.getElementById('branchFormModal').style.display = 'none'; // Hide branch modal
     document.getElementById('inventoryFormModal').style.display = 'none'; // Hide inventory modal
     document.getElementById('reportFormModal').style.display = 'none'; // Hide report modal
+    document.getElementById('logFormModal').style.display = 'none'; // Hide log modal
+    document.getElementById('logViewModal').style.display = 'none'; // Hide log view modal
     document.getElementById('reportViewModal').style.display = 'none'; // Hide report view modal
     document.getElementById('modalOverlay').style.display = 'none'; // Hide overlay
   });

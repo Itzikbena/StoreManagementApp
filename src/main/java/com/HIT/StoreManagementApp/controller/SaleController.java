@@ -157,9 +157,19 @@ public class SaleController {
         Branch branch = branchService.getBranchById(branchId);
         Customer customer = customerService.findById(customerId);
 
+        // Check if any entity is not found
         if (employee == null || product == null || branch == null || customer == null) {
             response.put("success", false);
-            response.put("message", "Employee, Product, Branch, or Customer not found.");
+            response.put("message", "העובד, מוצר, סניף, או לקוח לא נמצאו.");
+
+            // Create a new Log object for failed sale attempt
+            Log log = new Log("ניסיון מכירה נכשל",
+                    "ניסיון מכירה נכשל ע\"י עובד מספר: " + employeeId + ". סיבה: העובד, מוצר, סניף, או לקוח לא נמצאו.",
+                    LocalDateTime.now(), branchId, 3);
+
+            // Save the log using the method in Log class
+            log.save();
+
             return ResponseEntity.badRequest().body(response);
         }
 
@@ -167,7 +177,7 @@ public class SaleController {
         boolean success = BranchProductService.updateStock(branchId, productId, quantity);
 
         if (success) {
-            // Calculate the sale price (twice the quantity sold)
+            // Calculate the sale price (product price multiplied by quantity)
             double price = product.getPrice() * quantity;
 
             // Create a new Sale record
@@ -189,17 +199,38 @@ public class SaleController {
             // Save the Sale record
             saleRepository.save(sale);
 
+            // Create a new Log object for successful sale
+            Log log = new Log("מכירת מוצר",
+                    "מכירה בוצעה בהצלחה ע\"י עובד מספר: " + employeeId + " ללקוח מספר: " + customerId +
+                            " - מוצר: " + product.getName() + ", כמות: " + quantity + ", מחיר כולל: " + price,
+                    LocalDateTime.now(), branchId, 3);
+
+            // Save the log using the method in Log class
+            log.save();
+
             // Return success response with sale details
             response.put("success", true);
-            response.put("message", "Product sold successfully.");
+            response.put("message", "המוצר נמכר בהצלחה.");
             response.put("sale", sale); // Include the sale object in the response if needed
             return ResponseEntity.ok(response);
         } else {
+            // Create a new Log object for failed sale due to stock issues
+            Log log = new Log("מכירה נכשלה - בעיית מלאי",
+                    "המכירה נכשלה עקב חוסר במלאי או המוצר לא נמצא. מזהה מוצר: " + productId +
+                            ", מזהה סניף: " + branchId + ", כמות מבוקשת: " + quantity,
+                    LocalDateTime.now(), branchId, 3);
+
+            // Save the log using the method in Log class
+            log.save();
+
             // Failed to update stock
             response.put("success", false);
-            response.put("message", "Sale failed: insufficient stock or product not found.");
+            response.put("message", "המכירה נכשלה: חוסר במלאי או המוצר לא נמצא.");
             return ResponseEntity.badRequest().body(response);
         }
     }
+
+
+
 
 }
