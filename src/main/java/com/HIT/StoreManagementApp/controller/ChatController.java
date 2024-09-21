@@ -128,9 +128,14 @@ public class ChatController {
 
     // Endpoint to retrieve missed messages for a user
     @GetMapping("/api/missedMessages")
-    public List<Message> getMissedMessages(@RequestParam String username) {
-        return messageService.getMissedMessages(username);
+    public ResponseEntity<List<Message>> getMissedMessages(@RequestParam String username) {
+        List<Message> messages = messageService.getMissedMessages(username);
+        if (messages == null || messages.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(messages);
     }
+
 
     // Initialize active user tracking if needed
     @EventListener(ContextRefreshedEvent.class)

@@ -35,12 +35,12 @@ public class UserService {
         }
         else
         {
-                logsService.addLog(
-                        "עדכון עובד", // Action type
-                        "פרטי העובד: " + user.getUsername() + " יצא מהמערכת ", // Action description
-                        user.getBranch().getId(),
-                        2// Action description
-                );
+            logsService.addLog(
+                    "עדכון עובד", // Action type
+                    "פרטי העובד: " + user.getUsername() + " יצא מהמערכת ", // Action description
+                    user.getBranch().getId(),
+                    2// Action description
+            );
         }
 
 
