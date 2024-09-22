@@ -76,7 +76,10 @@ public class SecurityConfig {
                                 new AntPathRequestMatcher("/login"),
                                 new AntPathRequestMatcher("/api/**"),
                                 new AntPathRequestMatcher("/admin/**"),
-                                new AntPathRequestMatcher("/chat/**")
+                                new AntPathRequestMatcher("/chat/**"),
+                                new AntPathRequestMatcher("/updateBusyStatus"),
+                                new AntPathRequestMatcher("/status/**")
+
                         )
                 )
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
@@ -85,6 +88,7 @@ public class SecurityConfig {
                         .requestMatchers("/admin/users/isoffline").permitAll() // Allow everyone to access isoffline
                         .requestMatchers("/admin/users/isonline").permitAll()
                         .requestMatchers("/admin/users/**").permitAll()
+                        .requestMatchers("/updateBusyStatus").permitAll()
                         .requestMatchers("/api/customers").permitAll()
                         .requestMatchers("/admin/sales/**").permitAll()
                         .requestMatchers("/admin/customers/**").permitAll()

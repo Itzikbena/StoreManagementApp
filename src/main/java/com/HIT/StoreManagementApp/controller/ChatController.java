@@ -2,19 +2,20 @@ package com.HIT.StoreManagementApp.controller;
 
 import com.HIT.StoreManagementApp.model.ChatMessage;
 import com.HIT.StoreManagementApp.model.MessageEntity;
+import com.HIT.StoreManagementApp.model.User;
 import com.HIT.StoreManagementApp.service.MessageService;
+import com.HIT.StoreManagementApp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -33,6 +34,10 @@ public class ChatController {
 
     @Autowired
     private MessageService messageService;
+
+    @Autowired
+    private UserService userService;
+
 
 
 
@@ -98,6 +103,7 @@ public class ChatController {
     @MessageMapping("/sendPrivateMessage")
     @SendTo("/topic/private-messages")
     public ChatMessage sendPrivateMessage(@Payload ChatMessage chatMessage) {
+
         // Create a MessageEntity object and save it to the database
         MessageEntity messageEntity = new MessageEntity(
                 chatMessage.getUsername(),
@@ -111,6 +117,39 @@ public class ChatController {
 
         // Return the ChatMessage to broadcast it to the topic
         return chatMessage;
+    }
+
+    @GetMapping("/status/{username}")
+    public ResponseEntity<Map<String, Boolean>> getUserStatus(@PathVariable String username) {
+        Optional<User> userOptional = userService.findByUsername(username);
+
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            Map<String, Boolean> response = new HashMap<>();
+            response.put("busy", user.getisbusy()); // Return the busy status of the user
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null); // Return 404 if user not found
+        }
+    }
+
+    @PostMapping("/updateBusyStatus")
+    public ResponseEntity<String> updateBusyStatus(@RequestBody Map<String, Object> payload) {
+        String username1 = (String) payload.get("username1");
+        String username2 = (String) payload.get("username2");
+        boolean busy = (Boolean) payload.get("busy");
+
+        try {
+            // Update the busy status of the first user
+            userService.updateUserBusyStatus(username1, busy);
+
+            // Update the busy status of the second user
+            userService.updateUserBusyStatus(username2, busy);
+
+            return ResponseEntity.ok("Busy status updated successfully for both users");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating busy status for both users");
+        }
     }
 
     // Get the authenticated username

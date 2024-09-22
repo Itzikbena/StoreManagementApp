@@ -109,6 +109,10 @@
       background-color: #6c757d;
     }
 
+    .busy {
+      background-color: #ff9800; /* Orange for busy */
+    }
+
     /* Private chat window styles */
     .privateChatWindow {
       position: fixed;
@@ -215,14 +219,66 @@
   let allUsers = []; // List of all users
   let onlineUsers = []; // List of currently online users
   let pendingMessages = {};
+  let busyUsers = {};
+
 
   // Connect to WebSocket as soon as the page loads
   window.onload = function () {
     fetchUsers(); // Fetch list of users
-    connectToChat();
+    connectToChat(); // Connect to the WebSocket chat
     loadAllMessageHistory(); // Load message history from localStorage on page load
     loadPendingMessages(); // Load pending messages from localStorage on page load
+    updateUserStatusDisplay(); // Update the status display on page load
   };
+
+  // Function to set a conversation as busy between two users
+  let activeConversations = {}; // Object to track busy pairs
+
+  // Function to set a conversation as busy between two users
+  function setConversationBusy(user1, user2, isBusy) {
+    if (isBusy) {
+      // Store the conversation pair as busy if not already in conversation
+      if (activeConversations[user1] !== user2) {
+        activeConversations[user1] = user2;
+        activeConversations[user2] = user1;
+        updateUserStatus(user1, true); // Set user1 as busy
+        updateUserStatus(user2, true); // Set user2 as busy
+        updateUserStatusDisplay(); // Update the status display for both users
+      }
+    } else {
+      // Remove the conversation pair when no longer busy
+      delete activeConversations[user1];
+      delete activeConversations[user2];
+      updateUserStatus(user1, false); // Set user1 as not busy
+      updateUserStatus(user2, false); // Set user2 as not busy
+      updateUserStatusDisplay(); // Update the status display for both users
+    }
+  }
+
+
+
+
+
+
+  // Function to check if a user is busy using a server-side request
+  function isUserBusy(username, callback) {
+    fetch(`/status/${username}`)
+            .then(response => {
+              if (!response.ok) {
+                throw new Error(`Failed to fetch busy status for ${username}`);
+              }
+              return response.json(); // Convert response to JSON
+            })
+            .then(data => {
+              busyUsers[username] = data.busy; // Update local busy status
+              callback(data.busy); // Call the callback function with the busy status
+            })
+            .catch(error => {
+              console.error(`Error checking busy status for ${username}:`, error);
+              callback(false); // Assume user is not busy if there's an error
+            });
+  }
+
 
   // Fetch the list of all users
   function fetchUsers() {
@@ -238,6 +294,7 @@
   }
 
   // Display the list of all users with online/offline status
+  // Display the list of all users with online/offline/busy status
   function displayAllUsers() {
     const onlineUsersDiv = document.getElementById('onlineUsers');
     onlineUsersDiv.innerHTML = ''; // Clear the list
@@ -248,7 +305,15 @@
 
       const statusDot = document.createElement('div');
       statusDot.classList.add('statusDot');
-      statusDot.classList.add(onlineUsers.includes(user.username) ? 'online' : 'offline');
+
+      // Update status based on the user's state
+      if (busyUsers[user.username]) {
+        statusDot.classList.add('busy'); // Busy status
+      } else if (onlineUsers.includes(user.username)) {
+        statusDot.classList.add('online'); // Online status
+      } else {
+        statusDot.classList.add('offline'); // Offline status
+      }
 
       userElement.appendChild(statusDot);
       userElement.appendChild(document.createTextNode(user.username));
@@ -260,6 +325,41 @@
       onlineUsersDiv.appendChild(userElement);
     });
   }
+
+  // Update status of all users
+  function updateUserStatusDisplay() {
+    allUsers.forEach(user => {
+      isUserBusy(user.username, function(isBusy) {
+        displayAllUsers(); // Re-render the user list with updated statuses
+      });
+    });
+  }
+
+  // Example: Changing the user status dynamically
+  function updateUserStatus(username, isBusy) {
+    handleUserStatusChange(username, isBusy);
+    // Update the server with the new status
+    fetch('http://localhost:8080/updateBusyStatus', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username1: username, // Username of the user
+        busy: isBusy // Set the busy status
+      })
+    }).then(response => {
+      if (response.ok) {
+        console.log(`User busy status updated successfully for ${username} to ${isBusy}.`);
+      } else {
+        console.error(`Failed to update busy status for ${username}.`);
+      }
+    }).catch(error => {
+      console.error(`Error while updating busy status for ${username}:`, error);
+    });
+  }
+
+
 
   // Connect to WebSocket and subscribe to channels
   function connectToChat() {
@@ -285,9 +385,9 @@
                 }
 
                 // Subscribe to public messages
-                stompClient.subscribe('/topic/messages', function (message) {
-                  showMessage(JSON.parse(message.body));
-                });
+                  stompClient.subscribe('/topic/messages', function (message) {
+                    showMessage(JSON.parse(message.body));
+                  });
 
                 // Subscribe to active users and update the list
                 stompClient.subscribe('/topic/activeUsers', function (message) {
@@ -323,12 +423,16 @@
 
   // Fetch missed messages from the server
   function fetchMissedMessages() {
-    fetch(`/api/missedMessages?username=${username}`)
-            .then(response => response.json())
-            .then(messages => {
-              messages.forEach(message => {
-                showPrivateMessage(message);
-              });
+    fetch('/api/missedMessages?username=' + username)
+            .then(response => response.text()) // Read as text first to check for issues
+            .then(text => {
+              try {
+                const messages = JSON.parse(text); // Parse the text to JSON
+                console.log('Fetched missed messages:', messages);
+              } catch (error) {
+                console.error('Error parsing missed messages JSON:', error);
+                console.error('Received text:', text);
+              }
             })
             .catch(error => {
               console.error('Error fetching missed messages:', error);
@@ -378,7 +482,7 @@
   function openPrivateChat(recipient) {
     // Check if the chat window already exists
     if (document.getElementById('privateChat_' + recipient)) {
-      return;
+      return; // Exit if chat window is already open
     }
 
     const privateChatWindow = document.createElement('div');
@@ -404,50 +508,109 @@
     document.body.appendChild(privateChatWindow);
     openChatWindows.push(recipient); // Add to the list of open chat windows
 
+    // Set the active conversation as busy only if not already in active conversation
+    if (activeConversations[username] !== recipient) {
+      setConversationBusy(username, recipient, true); // Mark both users as in a busy conversation
+    }
+
     // Load message history if available
     loadMessageHistory(recipient);
   }
 
-  // Send private message to selected user
+
+
+  function handleUserStatusChange(username, isBusy) {
+    displayAllUsers(); // Re-render the user list with updated statuses
+
+    if (!isBusy) {
+      // User is now not busy, send all pending messages
+      const messagesToSend = getPendingMessages(username);
+      messagesToSend.forEach(message => {
+        stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify(message));
+      });
+
+      // Clear pending messages after sending
+      clearPendingMessages(username);
+      console.log(`Sent all pending messages for ${username}.`);
+    }
+  }
+
+
+  // Function to get pending messages for a user
+  function getPendingMessages(username) {
+    return pendingMessages[username] || [];
+  }
+
+  // Function to clear pending messages for a user
+  function clearPendingMessages(username) {
+    delete pendingMessages[username];
+    savePendingMessages(); // Save changes to localStorage
+  }
+
   function sendPrivateMessage(recipient) {
     const input = document.getElementById('privateMessageInput_' + recipient);
     const messageContent = input.value;
+
     if (messageContent && stompClient) {
       const message = {
-        'username': username,
+        'username': username, // Sender username
         'message': messageContent,
         'recipient': recipient
       };
 
-      if (onlineUsers.includes(recipient)) {
-        // המשתמש מחובר, שלח את ההודעה מיד
-        stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify(message));
-      } else {
-        // המשתמש לא מחובר, שמור את ההודעה כ-"בהמתנה"
-        if (!pendingMessages[recipient]) {
-          pendingMessages[recipient] = [];
+      // Check if the recipient is busy using the server-side request
+      isUserBusy(recipient, function(isBusy) {
+        if (isBusy && activeConversations[recipient] !== username) {
+          // If the recipient is busy and not in an active conversation with sender, store the message
+          if (!pendingMessages[recipient]) {
+            pendingMessages[recipient] = [];
+          }
+          pendingMessages[recipient].push(message);
+          savePendingMessages(); // Save to localStorage
+          console.log(`Message stored for user ${recipient} (busy or not in conversation):`, message);
+        } else {
+          // If the recipient is in an active conversation with sender, send the message
+          stompClient.send("/app/sendPrivateMessage", {}, JSON.stringify(message));
+          console.log("Message sent:", message);
         }
-        pendingMessages[recipient].push(message);
-        savePendingMessages(); // שמור את ההודעות בהמתנה ב-localStorage או בשרת
-        console.log("Message saved to pending for user:", recipient);
+
+        input.value = ''; // Clear input
+
+        // Add message to chat window and save in history
+        const chatMessages = document.getElementById('privateChat_' + recipient).querySelector('.privateChatMessages');
+        const messageElement = document.createElement('div');
+        messageElement.innerText = "Me: " + messageContent;
+        chatMessages.appendChild(messageElement);
+
+        // Save message in history
+        if (!messageHistory[recipient]) {
+          messageHistory[recipient] = [];
+        }
+        messageHistory[recipient].push(message);
+        saveMessageHistory(recipient); // Save to localStorage
+      });
+
+      // Update the status of the sender to busy (after checking recipient's status)
+      updateUserStatus(username, true); // Set the sender user as busy
+
+      // Set the active conversation as busy only if not already active
+      if (activeConversations[username] !== recipient) {
+        setConversationBusy(username, recipient, true); // Mark both users as in a busy conversation
       }
-
-      input.value = ''; // Clear input
-
-      // Add message to chat window and save in history
-      const chatMessages = document.getElementById('privateChat_' + recipient).querySelector('.privateChatMessages');
-      const messageElement = document.createElement('div');
-      messageElement.innerText = "Me: " + messageContent;
-      chatMessages.appendChild(messageElement);
-
-      // Save message in history
-      if (!messageHistory[recipient]) {
-        messageHistory[recipient] = [];
-      }
-      messageHistory[recipient].push(message);
-      saveMessageHistory(recipient); // Save to localStorage
     }
   }
+
+
+
+  // Function to end the busy state between two users
+  function endConversation(user1, user2) {
+    setConversationBusy(user1, user2, false); // Remove busy state for the conversation
+    updateUserStatus(user1, false); // Update status to not busy
+    updateUserStatus(user2, false); // Update status to not busy
+    console.log(`Ended conversation between ${user1} and ${user2}.`);
+  }
+
+
 
   function savePendingMessages() {
     localStorage.setItem('pendingMessages', JSON.stringify(pendingMessages));
@@ -464,9 +627,33 @@
   function closePrivateChat(recipient) {
     const privateChatWindow = document.getElementById('privateChat_' + recipient);
     if (privateChatWindow) {
-      document.body.removeChild(privateChatWindow);
-      openChatWindows = openChatWindows.filter(user => user !== recipient); // Remove from the list of open chat windows
-      rearrangeChatWindows(); // Rearrange remaining chat windows
+      document.body.removeChild(privateChatWindow); // Remove the chat window from the DOM
+      openChatWindows = openChatWindows.filter(user => user !== recipient); // Remove the user from the list of open chat windows
+      rearrangeChatWindows(); // Rearrange the remaining chat windows
+
+      // Call endConversation to update the status and remove busy state
+      endConversation(username, recipient);
+
+      // Send a POST request to the server to update the busy status of both users
+      fetch('http://localhost:8080/updateBusyStatus', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username1: username, // Username of the user who closed the chat
+          username2: recipient, // Username of the recipient user
+          busy: false // Set the busy status to false for both
+        })
+      }).then(response => {
+        if (response.ok) {
+          console.log('Both users busy status updated successfully.');
+        } else {
+          console.error('Failed to update busy status for both users.');
+        }
+      }).catch(error => {
+        console.error('Error while updating busy status for both users:', error);
+      });
     }
   }
 

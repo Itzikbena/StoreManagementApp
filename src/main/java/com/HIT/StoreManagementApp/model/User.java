@@ -28,6 +28,8 @@ public class User {
 
     private boolean online;  // Track online status
 
+    private boolean busy;
+
     // Getters and setters
 
     public Long getId() {
@@ -80,29 +82,19 @@ public class User {
         this.online = online;
     }
 
-    // New getters and setters
+    public boolean getisbusy() {
+        return busy;
+    }
+
+    public void setisbusy(boolean busy) {
+        this.busy = busy;
+    }
     public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public long getPassport() {
-        return passport;
-    }
-
-    public void setPassport(long passport) {
-        this.passport = passport;
-    }
-
-    public long getPhone() {
-        return phone;
-    }
-
-    public void setPhone(long phone) {
-        this.phone = phone;
     }
 
     public Collection<? extends GrantedAuthority> getAuthorities() {

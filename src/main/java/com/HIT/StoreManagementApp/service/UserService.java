@@ -22,6 +22,17 @@ public class UserService {
     private LogsService logsService; // Injecting LogsService to record logs
 
     // Update a user in the database and add a log
+
+
+    public void updateUserBusyStatus(String username, boolean busy) {
+        Optional<User> optionalUser = userRepository.findByUsername(username);
+        optionalUser.ifPresent(user -> {
+            user.setisbusy(busy);
+            userRepository.save(user);
+        });
+    }
+
+
     public User updateUser(User user) {
         User updatedUser = userRepository.save(user);
 
