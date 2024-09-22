@@ -49,7 +49,7 @@
     }
 
     /* Admin form modal */
-    #adminFormModal, #branchFormModal, #inventoryFormModal, #reportFormModal, #reportViewModal, #logFormModal, #logViewModal {
+    #adminFormModal, #branchFormModal, #inventoryFormModal, #reportFormModal, #reportViewModal, #logFormModal, #logViewModal, #messageHistoryModal {
       display: none; /* Hidden by default */
       position: fixed;
       top: 50%;
@@ -79,7 +79,7 @@
     }
 
     /* Modal close button */
-    #closeModalBtn, #closeBranchModalBtn, #closeInventoryModalBtn, #closeReportModalBtn, #closeReportViewModalBtn, #closeLogModalBtn, #closeLogViewModalBtn {
+    #closeModalBtn, #closeBranchModalBtn, #closeInventoryModalBtn, #closeReportModalBtn, #closeReportViewModalBtn, #closeLogModalBtn, #closeLogViewModalBtn, #closeMessageHistoryModalBtn {
       background-color: red;
       color: white;
       border: none;
@@ -95,18 +95,18 @@
     }
 
     /* Log display table */
-    #logTable, #reportTable {
+    #logTable, #reportTable, #messagesTable {
       margin-top: 20px;
       width: 100%;
       border-collapse: collapse;
     }
 
-    #logTable th, #logTable td, #reportTable th, #reportTable td {
+    #logTable th, #logTable td, #reportTable th, #reportTable td, #messagesTable th, #messagesTable td {
       border: 1px solid #ddd;
       padding: 8px;
     }
 
-    #logTable th, #reportTable th {
+    #logTable th, #reportTable th, #messagesTable th {
       background-color: #007bff;
       color: white;
     }
@@ -305,6 +305,44 @@
   <button id="closeLogViewModalBtn">סגור</button>
 </div>
 
+<!-- Modal to view message history -->
+<div id="messageHistoryModal">
+  <h2>היסטוריית שיחות</h2>
+
+  <!-- Button to show all message history -->
+  <button id="showAllMessagesBtn">הצג את כל היסטוריית השיחות</button>
+
+  <!-- Form to filter messages between two users -->
+  <div id="messageFilterForm">
+    <h3>הצג שיחות בין משתמשים</h3>
+    <label for="senderId">מזהה שולח:</label>
+    <input type="text" id="senderId" placeholder="הכנס מזהה שולח">
+
+    <label for="receiverId">מזהה מקבל:</label>
+    <input type="text" id="receiverId" placeholder="הכנס מזהה מקבל">
+
+    <button id="showMessagesBetweenBtn">הצג שיחות</button>
+  </div>
+
+  <!-- Table to display messages -->
+  <div class="scrollable-table">
+    <table id="messagesTable">
+      <thead>
+      <tr>
+        <th>מזהה שולח</th>
+        <th>מזהה מקבל</th>
+        <th>תוכן</th>
+        <th>נקרא</th>
+      </tr>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+
+  <button id="closeMessageHistoryModalBtn">סגור</button>
+</div>
+
 <!-- Modal Overlay -->
 <div id="modalOverlay"></div>
 
@@ -494,6 +532,12 @@
   document.getElementById('submitLogBtn').addEventListener('click', () => {
     const logType = document.getElementById('logTypeSelect').value;
 
+    if (logType === '4') { // If log type is '4' (message history), open the message history modal
+      document.getElementById('messageHistoryModal').style.display = 'block'; // Show message history modal
+      document.getElementById('modalOverlay').style.display = 'block'; // Show overlay
+      return; // Do not fetch regular logs
+    }
+
     if (!logType) {
       alert('אנא בחר סוג לוג');
       return;
@@ -630,6 +674,12 @@
     document.getElementById('modalOverlay').style.display = 'none'; // Hide overlay
   });
 
+  // Close the message history modal when the close button is clicked
+  document.getElementById('closeMessageHistoryModalBtn').addEventListener('click', () => {
+    document.getElementById('messageHistoryModal').style.display = 'none'; // Hide message history modal
+    document.getElementById('modalOverlay').style.display = 'none'; // Hide overlay
+  });
+
   // Close the modal when the overlay is clicked
   document.getElementById('modalOverlay').addEventListener('click', () => {
     document.getElementById('adminFormModal').style.display = 'none'; // Hide modal
@@ -639,8 +689,50 @@
     document.getElementById('logFormModal').style.display = 'none'; // Hide log modal
     document.getElementById('logViewModal').style.display = 'none'; // Hide log view modal
     document.getElementById('reportViewModal').style.display = 'none'; // Hide report view modal
+    document.getElementById('messageHistoryModal').style.display = 'none'; // Hide message history modal
     document.getElementById('modalOverlay').style.display = 'none'; // Hide overlay
   });
+
+  // Function to fetch all messages
+  document.getElementById('showAllMessagesBtn').addEventListener('click', () => {
+    fetch('http://localhost:8080/api/messages/all')
+            .then(response => response.json())
+            .then(data => displayMessages(data))
+            .catch(error => console.error('Error fetching messages:', error));
+  });
+
+  // Function to fetch messages between two users
+  document.getElementById('showMessagesBetweenBtn').addEventListener('click', () => {
+    const senderId = document.getElementById('senderId').value;
+    const receiverId = document.getElementById('receiverId').value;
+
+    if (!senderId || !receiverId) {
+      alert('אנא מלא את כל השדות');
+      return;
+    }
+
+    fetch(`http://localhost:8080/api/messages/between?senderId=${senderId}&receiverId=${receiverId}`)
+            .then(response => response.json())
+            .then(data => displayMessages(data))
+            .catch(error => console.error('Error fetching messages:', error));
+  });
+
+  // Function to display messages in the table
+  function displayMessages(messages) {
+    const messagesTableBody = document.querySelector('#messagesTable tbody');
+    messagesTableBody.innerHTML = ''; // Clear the table before displaying new data
+
+    messages.forEach(message => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+            <td>${message.senderId}</td>
+            <td>${message.receiverId}</td>
+            <td>${message.content}</td>
+            <td>${message.received ? 'נקרא' : 'לא נקרא'}</td>
+        `;
+      messagesTableBody.appendChild(row);
+    });
+  }
 </script>
 
 </body>

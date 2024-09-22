@@ -25,6 +25,13 @@ public class MessageService {
 
 
     // Retrieve missed messages for a specific user
+
+    // Retrieve all messages
+    public List<MessageEntity> getAllMessages() {
+        return messageRepository.findAll();
+    }
+
+    // Retrieve messages between two user
     public List<Message> getMissedMessages(String username) {
         List<Message> messages = missedMessages.getOrDefault(username, new ArrayList<>());
         // Clear messages after retrieving them
