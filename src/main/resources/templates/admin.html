@@ -49,7 +49,7 @@
     }
 
     /* Admin form modal */
-    #adminFormModal, #branchFormModal, #inventoryFormModal, #reportFormModal, #reportViewModal, #logFormModal, #logViewModal, #messageHistoryModal {
+    #adminFormModal, #branchFormModal, #inventoryFormModal, #reportFormModal, #reportViewModal, #logFormModal, #logViewModal{
       display: none; /* Hidden by default */
       position: fixed;
       top: 50%;
@@ -65,6 +65,24 @@
       overflow-y: auto; /* Enable scrolling for long content */
       max-height: 80vh; /* Set maximum height */
     }
+
+    #messageHistoryModal {
+      display: none; /* Hidden by default */
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: white;
+      padding: 20px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+      border-radius: 8px;
+      width: 1000px; /* Update the width to make the modal wider */
+      text-align: center; /* Center align modal content */
+      overflow-y: auto; /* Enable scrolling for long content */
+      max-height: 80vh; /* Set maximum height */
+    }
+
 
     /* Modal overlay */
     #modalOverlay {
@@ -101,9 +119,16 @@
       border-collapse: collapse;
     }
 
-    #logTable th, #logTable td, #reportTable th, #reportTable td, #messagesTable th, #messagesTable td {
+    #logTable th, #logTable td, #reportTable th, #reportTable td{
       border: 1px solid #ddd;
       padding: 8px;
+    }
+
+    #messagesTable th, #messagesTable td {
+      border: 1px solid #ddd;
+      padding: 10px; /* Increase padding for better readability */
+      word-break: break-word; /* Wrap long content */
+      min-width: 150px; /* Set minimum width for cells */
     }
 
     #logTable th, #reportTable th, #messagesTable th {
@@ -113,7 +138,7 @@
 
     /* Scrollable table */
     .scrollable-table {
-      max-height: 300px; /* Set maximum height for scrollable table */
+      max-height: 600px; /* Set maximum height for scrollable table */
       overflow-y: auto; /* Enable vertical scrolling */
       width: 100%; /* Full width */
     }
@@ -332,7 +357,7 @@
         <th>מזהה שולח</th>
         <th>מזהה מקבל</th>
         <th>תוכן</th>
-        <th>נקרא</th>
+        <th>סטטוס</th>
       </tr>
       </thead>
       <tbody>
@@ -733,6 +758,7 @@
       messagesTableBody.appendChild(row);
     });
   }
+
 </script>
 
 </body>
