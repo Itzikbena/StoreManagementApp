@@ -1,13 +1,13 @@
 
 # Store Chain Management System
 
-Welcome to the Store Chain Management System project repository, created for the Internet Programming course at HIT - Holon Institute of Technology, Summer Semester 2024, under the guidance of Mr. Roi Zimon.
+This repository contains the Store Chain Management System project, developed for the Internet Programming course at HIT - Holon Institute of Technology during the Summer Semester of 2024, under the mentorship of Mr. Roi Zimon.
 
 ## Introduction
 
-This project is a client-server application written in Java, with a MySQL database for data storage and management.
+This project is a robust client-server application developed in Java, utilizing a MySQL database for efficient data storage and management.
 
-The application utilizes a custom protocol to encode and decode actions and objects, enabling seamless data transfer between the client and server over sockets. This allows the server to handle requests and execute the corresponding actions effectively.
+To facilitate smooth communication between the client and server, the application employs a custom protocol for encoding and decoding actions and objects. This mechanism ensures secure and efficient data transmission over sockets, enabling the server to process requests and execute corresponding actions seamlessly.
 
 ## Main Features
 
@@ -52,3 +52,8 @@ To run the application locally, follow these instructions:
 5. **Access the Application:**
    - Open your web browser and go to `http://localhost:8080` to use the Store Chain Management System.
 
+## Video Demonstration
+
+For a demonstration of the system's features, check out our video on YouTube:
+
+[Watch the video](https://youtu.be/J5zn9XHEFGk)
